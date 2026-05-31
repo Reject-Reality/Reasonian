@@ -46,6 +46,34 @@ const patchCodexSdkImportMeta = {
   },
 };
 
+const patchReasonixImportMeta = {
+  name: 'patch-reasonix-import-meta',
+  setup(build) {
+    // Match all reasonix dist files
+    build.onLoad(
+      { filter: /[\\/]DeepSeek-Reasonix[\\/]dist[\\/].*\.js$/ },
+      async (args) => {
+        let contents = await fsPromises.readFile(args.path, 'utf8');
+        // Replace `globalThis.require = __cr(import.meta.url)` with a no-op
+        // — we don't need createRequire in the bundled context.
+        contents = contents.replace(
+          /globalThis\.require\s*=\s*__cr\(import\.meta\.url\)/g,
+          '/* patched: no createRequire in bundled context */ 0',
+        );
+        // Replace other import.meta.url usages with a CJS-compatible shim
+        contents = contents.replace(
+          /import\.meta\.url/g,
+          '(typeof __filename !== "undefined" ? require("url").pathToFileURL(__filename).href : "file:///plugin/main.js")',
+        );
+        return {
+          contents,
+          loader: 'js',
+        };
+      },
+    );
+  },
+};
+
 const patchRendererUnsafeUnref = {
   name: 'patch-renderer-unsafe-unref',
   setup(build) {
@@ -112,7 +140,7 @@ const copyToObsidian = {
 const context = await esbuild.context({
   entryPoints: ['src/main.ts'],
   bundle: true,
-  plugins: [patchCodexSdkImportMeta, patchRendererUnsafeUnref, copyToObsidian],
+  plugins: [patchCodexSdkImportMeta, patchReasonixImportMeta, patchRendererUnsafeUnref, copyToObsidian],
   external: [
     'obsidian',
     'electron',
@@ -131,7 +159,7 @@ const context = await esbuild.context({
     ...builtins.map(m => `node:${m}`),
   ],
   format: 'cjs',
-  target: 'es2018',
+  target: 'es2022',
   logLevel: 'info',
   sourcemap: prod ? false : 'inline',
   treeShaking: true,

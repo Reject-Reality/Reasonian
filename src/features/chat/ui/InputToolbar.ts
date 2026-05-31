@@ -262,8 +262,9 @@ export class ThinkingBudgetSelector {
 
 export class PermissionToggle {
   private container: HTMLElement;
-  private toggleEl: HTMLElement | null = null;
-  private labelEl: HTMLElement | null = null;
+  private gearsEl: HTMLElement | null = null;
+  private currentEl: HTMLElement | null = null;
+  private optionsEl: HTMLElement | null = null;
   private callbacks: ToolbarCallbacks;
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
@@ -275,12 +276,11 @@ export class PermissionToggle {
   private render() {
     this.container.empty();
 
-    this.labelEl = this.container.createSpan({ cls: 'claudian-permission-label' });
-    this.toggleEl = this.container.createDiv({ cls: 'claudian-toggle-switch' });
+    this.gearsEl = this.container.createDiv({ cls: 'claudian-permission-gears' });
+    this.currentEl = this.gearsEl.createDiv({ cls: 'claudian-permission-current' });
+    this.optionsEl = this.gearsEl.createDiv({ cls: 'claudian-permission-options' });
 
     this.updateDisplay();
-
-    this.toggleEl.addEventListener('click', () => this.toggle());
   }
 
   private getToggleConfig(): ProviderPermissionModeToggleConfig | null {
@@ -288,8 +288,20 @@ export class PermissionToggle {
     return uiConfig.getPermissionModeToggle?.() ?? null;
   }
 
-  updateDisplay() {
-    if (!this.toggleEl || !this.labelEl) return;
+  private getModeLabel(value: string): string {
+    const toggleConfig = this.getToggleConfig();
+    if (!toggleConfig) return value;
+    if (value === toggleConfig.inactiveValue) return toggleConfig.inactiveLabel;
+    if (value === toggleConfig.activeValue) return toggleConfig.activeLabel;
+    if (toggleConfig.planValue && value === toggleConfig.planValue) {
+      return toggleConfig.planLabel ?? 'PLAN';
+    }
+    return value;
+  }
+
+  private renderOptions(): void {
+    if (!this.optionsEl) return;
+    this.optionsEl.empty();
 
     const toggleConfig = this.getToggleConfig();
     const capabilities = this.callbacks.getCapabilities();
@@ -299,38 +311,48 @@ export class PermissionToggle {
     }
 
     this.container.style.display = '';
-    const mode = this.callbacks.getSettings().permissionMode;
+    const currentMode = this.callbacks.getSettings().permissionMode;
     const planValue = toggleConfig.planValue;
-    const planLabel = toggleConfig.planLabel ?? 'PLAN';
     const canShowPlan = Boolean(planValue) && capabilities.supportsPlanMode;
 
-    if (canShowPlan && planValue && mode === planValue) {
-      this.toggleEl.style.display = 'none';
-      this.labelEl.setText(planLabel);
-      this.labelEl.addClass('plan-active');
-    } else {
-      this.toggleEl.style.display = '';
-      this.labelEl.removeClass('plan-active');
-      if (mode === toggleConfig.activeValue) {
-        this.toggleEl.addClass('active');
-        this.labelEl.setText(toggleConfig.activeLabel);
-      } else {
-        this.toggleEl.removeClass('active');
-        this.labelEl.setText(toggleConfig.inactiveLabel);
-      }
+    this.addOption(toggleConfig.inactiveValue, toggleConfig.inactiveLabel, currentMode);
+    this.addOption(toggleConfig.activeValue, toggleConfig.activeLabel, currentMode);
+    if (canShowPlan && planValue) {
+      this.addOption(planValue, toggleConfig.planLabel ?? 'PLAN', currentMode);
     }
   }
 
-  private async toggle() {
-    const toggleConfig = this.getToggleConfig();
-    if (!toggleConfig) return;
+  private addOption(value: string, label: string, currentMode: string): void {
+    if (!this.optionsEl) return;
+    const option = this.optionsEl.createDiv({ cls: 'claudian-permission-option' });
+    if (value === currentMode) {
+      option.addClass('selected');
+    }
+    option.setText(label);
+    option.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (value !== currentMode) {
+        await this.callbacks.onPermissionModeChange(value);
+        this.updateDisplay();
+      }
+    });
+  }
 
-    const current = this.callbacks.getSettings().permissionMode;
-    const newMode = current === toggleConfig.activeValue
-      ? toggleConfig.inactiveValue
-      : toggleConfig.activeValue;
-    await this.callbacks.onPermissionModeChange(newMode);
-    this.updateDisplay();
+  updateDisplay(): void {
+    if (!this.currentEl) return;
+
+    const toggleConfig = this.getToggleConfig();
+    if (!toggleConfig) {
+      this.container.style.display = 'none';
+      return;
+    }
+
+    this.container.style.display = '';
+    const currentMode = this.callbacks.getSettings().permissionMode;
+    this.currentEl.setText(this.getModeLabel(currentMode));
+
+    // Re-render dropdown options to sync selection highlighting
+    this.renderOptions();
   }
 }
 

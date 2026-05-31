@@ -10,7 +10,7 @@ export {
   type SessionMetadata,
   type StreamChunk,
   type UsageInfo,
-  VIEW_TYPE_CLAUDIAN,
+  VIEW_TYPE_REASONIAN,
 } from './chat';
 export { type ProviderId } from './provider';
 

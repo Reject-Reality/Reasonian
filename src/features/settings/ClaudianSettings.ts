@@ -157,6 +157,37 @@ export class ClaudianSettingTab extends PluginSettingTab {
   }
 
   private renderGeneralTab(container: HTMLElement): void {
+    // --- API Configuration ---
+    new Setting(container).setName('API Configuration').setHeading();
+
+    new Setting(container)
+      .setName('API Key')
+      .setDesc('Your DeepSeek API key. Get one at https://platform.deepseek.com/api_keys')
+      .addText((text) => {
+        text
+          .setPlaceholder('sk-...')
+          .setValue(this.getApiKey())
+          .onChange(async (value) => {
+            this.setApiKey(value);
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.type = 'password';
+      });
+
+    new Setting(container)
+      .setName('Base URL')
+      .setDesc('Custom API endpoint (leave empty for default: https://api.deepseek.com)')
+      .addText((text) => {
+        text
+          .setPlaceholder('https://api.deepseek.com')
+          .setValue(this.getBaseUrl())
+          .onChange(async (value) => {
+            this.setBaseUrl(value);
+            await this.plugin.saveSettings();
+          });
+      });
+
+    // --- Language ---
     new Setting(container)
       .setName(t('settings.language.name'))
       .setDesc(t('settings.language.desc'))
@@ -551,6 +582,32 @@ export class ClaudianSettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
       });
     }
+  }
+
+  private getApiKey(): string {
+    const config = (this.plugin.settings as unknown as Record<string, unknown>).providerConfigs as Record<string, Record<string, unknown>> | undefined;
+    return (config?.reasonix?.apiKey as string) ?? '';
+  }
+
+  private setApiKey(value: string): void {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const configs = (settings.providerConfigs ?? {}) as Record<string, Record<string, unknown>>;
+    if (!configs.reasonix) configs.reasonix = {};
+    configs.reasonix.apiKey = value;
+    settings.providerConfigs = configs;
+  }
+
+  private getBaseUrl(): string {
+    const config = (this.plugin.settings as unknown as Record<string, unknown>).providerConfigs as Record<string, Record<string, unknown>> | undefined;
+    return (config?.reasonix?.baseUrl as string) ?? '';
+  }
+
+  private setBaseUrl(value: string): void {
+    const settings = this.plugin.settings as unknown as Record<string, unknown>;
+    const configs = (settings.providerConfigs ?? {}) as Record<string, Record<string, unknown>>;
+    if (!configs.reasonix) configs.reasonix = {};
+    configs.reasonix.baseUrl = value;
+    settings.providerConfigs = configs;
   }
 
   private async restartServiceForPromptChange(): Promise<void> {

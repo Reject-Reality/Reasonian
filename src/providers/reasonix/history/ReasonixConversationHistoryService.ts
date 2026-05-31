@@ -1,33 +1,63 @@
-import {
-  loadSessionMessages,
-  appendSessionMessage,
-  deleteSession,
-  listSessions,
-} from 'reasonix';
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
-import type { Conversation } from '../../../core/types';
+import type { Conversation, ChatMessage } from '../../../core/types';
 
-/** Bridges Claudian's Conversation metadata with Reasonix JSONL session storage. */
+/**
+ * Persistent message store for Reasonian.
+ * Messages are saved alongside Claudian's session metadata using Obsidian's Vault adapter.
+ */
 export class ReasonixConversationHistoryService implements ProviderConversationHistoryService {
+  /** Set by the plugin after initialization to provide vault filesystem access. */
+  private vaultAdapter: { exists(path: string): Promise<boolean>; read(path: string): Promise<string>; write(path: string, data: string): Promise<void>; delete(path: string): Promise<void>; mkdir(path: string): Promise<void> } | null = null;
+
+  setVaultAdapter(adapter: any): void {
+    this.vaultAdapter = adapter;
+  }
+
+  private messagePath(sessionId: string): string {
+    return `.reasonix/sessions/${sessionId}.messages.json`;
+  }
+
+  /** Ensure the parent directory for a file path exists. */
+  private async ensureParentFolder(filePath: string): Promise<void> {
+    if (!this.vaultAdapter) return;
+    const folder = filePath.substring(0, filePath.lastIndexOf('/'));
+    if (!folder) return;
+
+    // Recursively ensure all parent directories exist
+    const parts = folder.split('/').filter(Boolean);
+    let current = '';
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      try {
+        const exists = await this.vaultAdapter.exists(current);
+        if (!exists) {
+          await this.vaultAdapter.mkdir(current);
+        }
+      } catch {
+        // Best-effort directory creation
+      }
+    }
+  }
+
   async hydrateConversationHistory(
     conversation: Conversation,
     _vaultPath: string | null,
   ): Promise<void> {
     const sessionId = conversation.sessionId ?? conversation.id;
-    if (!sessionId) return;
+    if (!sessionId || !this.vaultAdapter) return;
 
+    const filePath = this.messagePath(sessionId);
     try {
-      const messages = loadSessionMessages(sessionId);
-      if (messages.length > 0) {
-        conversation.messages = messages.map((msg, i) => ({
-          id: `${sessionId}-${i}`,
-          role: msg.role as 'user' | 'assistant',
-          content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
-          timestamp: Date.now() - (messages.length - i) * 1000,
-        }));
+      const exists = await this.vaultAdapter.exists(filePath);
+      if (exists) {
+        const raw = await this.vaultAdapter.read(filePath);
+        const messages = JSON.parse(raw) as ChatMessage[];
+        if (Array.isArray(messages) && messages.length > 0) {
+          conversation.messages = messages;
+        }
       }
     } catch {
-      // Session file doesn't exist or is corrupted — start fresh
+      // File doesn't exist or is corrupted — start fresh
     }
   }
 
@@ -36,12 +66,31 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
     _vaultPath: string | null,
   ): Promise<void> {
     const sessionId = conversation.sessionId ?? conversation.id;
-    if (!sessionId) return;
+    if (!sessionId || !this.vaultAdapter) return;
 
+    const filePath = this.messagePath(sessionId);
     try {
-      deleteSession(sessionId);
+      const exists = await this.vaultAdapter.exists(filePath);
+      if (exists) {
+        await this.vaultAdapter.delete(filePath);
+      }
     } catch {
       // Best-effort deletion
+    }
+    conversation.messages = [];
+  }
+
+  /** Save messages via vault adapter. */
+  async saveMessages(conversation: Conversation): Promise<void> {
+    const sessionId = conversation.sessionId ?? conversation.id;
+    if (!sessionId || !conversation.messages?.length || !this.vaultAdapter) return;
+
+    const filePath = this.messagePath(sessionId);
+    try {
+      await this.ensureParentFolder(filePath);
+      await this.vaultAdapter.write(filePath, JSON.stringify(conversation.messages, null, 2));
+    } catch {
+      // Best-effort save
     }
   }
 

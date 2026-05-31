@@ -1,22 +1,9 @@
-import {
-  DeepSeekClient,
-  CacheFirstLoop,
-  ImmutablePrefix,
-  ToolRegistry,
-  registerFilesystemTools,
-  registerShellTools,
-  registerWebTools,
-  registerMemoryTools,
-  registerPlanTool,
-  registerTodoTool,
-  registerChoiceTool,
-} from 'reasonix';
-import type { LoopEvent } from 'reasonix';
-import type {
-  FilesystemToolsOptions,
-  ShellToolsOptions,
-  MemoryToolsOptions,
-} from 'reasonix';
+// Minimal ReasonixChatRuntime — uses DeepSeekClient directly for chat,
+// avoiding heavy Node.js dependencies (filesystem, shell, tree-sitter, etc.)
+// that are incompatible with Obsidian's Electron renderer.
+
+import { DeepSeekClient } from 'reasonix';
+import type { ChatMessage as ReasonixChatMessage } from 'reasonix';
 
 import { REASONIX_PROVIDER_CAPABILITIES } from '../capabilities';
 import { getReasonixProviderSettings } from '../settings';
@@ -44,20 +31,24 @@ import { buildSystemPrompt } from '../../../core/prompt/mainAgent';
 
 const PROVIDER_ID = 'reasonix';
 
+// Simple message store for conversation history (in-memory only)
+interface StoredMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 export class ReasonixChatRuntime implements ChatRuntime {
   readonly providerId = PROVIDER_ID;
 
   private plugin!: ClaudianPlugin;
   private client: DeepSeekClient | null = null;
-  private loop: CacheFirstLoop | null = null;
   private currentSystemPrompt: string = '';
   private sessionId: string | null = null;
   private _cancelled = false;
+  private messageHistory: StoredMessage[] = [];
 
   // Callbacks
   private approvalCallback: ApprovalCallback | null = null;
-  private askUserQuestionCallback: AskUserQuestionCallback | null = null;
-  private exitPlanModeCallback: ExitPlanModeCallback | null = null;
   private autoTurnCallback: ((result: AutoTurnResult) => void) | null = null;
 
   setPlugin(plugin: ClaudianPlugin): void {
@@ -71,46 +62,25 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   private vaultPath(): string {
-    return this.plugin ? (getVaultPath(this.plugin.app) ?? process.cwd()) : process.cwd();
+    return this.plugin ? (getVaultPath(this.plugin.app) ?? '.') : '.';
   }
 
   private ensureClient(): DeepSeekClient {
     if (!this.client) {
       const settings = this.getSettings();
+      if (!settings.apiKey) {
+        throw new Error('DEEPSEEK_API_KEY is not set. Please add your API key in Reasonian settings.');
+      }
       this.client = new DeepSeekClient({
-        apiKey: settings.apiKey || undefined,
+        apiKey: settings.apiKey,
         baseUrl: settings.baseUrl || undefined,
       });
     }
     return this.client;
   }
 
-  private buildToolRegistry(): ToolRegistry {
-    const registry = new ToolRegistry();
-    const rootDir = this.vaultPath();
-
-    const fsOpts: FilesystemToolsOptions = { rootDir };
-    registerFilesystemTools(registry, fsOpts);
-
-    const shellOpts: ShellToolsOptions = { rootDir };
-    registerShellTools(registry, shellOpts);
-
-    registerWebTools(registry);
-
-    const memOpts: MemoryToolsOptions = { projectRoot: rootDir };
-    registerMemoryTools(registry, memOpts);
-
-    registerPlanTool(registry);
-    registerTodoTool(registry);
-    // registerSubagentTool requires a client instance — skip for now
-    registerChoiceTool(registry);
-
-    return registry;
-  }
-
-  private buildSystemPrompt(): string {
+  private buildSystemPromptText(): string {
     const vaultPath = this.vaultPath();
-    const settings = this.getSettings();
     const pluginSettings = this.plugin?.settings;
 
     return buildSystemPrompt({
@@ -118,7 +88,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       userName: pluginSettings?.userName,
       mediaFolder: pluginSettings?.mediaFolder,
       customPrompt: pluginSettings?.systemPrompt,
-      memoryEnabled: true, // Always attempt memory injection
+      memoryEnabled: true,
     });
   }
 
@@ -134,7 +104,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     return {
       request,
       persistedContent: request.text,
-      prompt: this.currentSystemPrompt || this.buildSystemPrompt(),
+      prompt: this.currentSystemPrompt || this.buildSystemPromptText(),
       isCompact: false,
       mcpMentions: new Set(),
     };
@@ -145,14 +115,11 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   setResumeCheckpoint(_checkpointId: string | undefined): void {}
-
   syncConversationState(
     _conversation: ChatRuntimeConversationState | null,
     _externalContextPaths?: string[],
   ): void {}
-
   async reloadMcpServers(): Promise<void> {}
-
   async ensureReady(_options?: ChatRuntimeEnsureReadyOptions): Promise<boolean> {
     return true;
   }
@@ -166,46 +133,72 @@ export class ReasonixChatRuntime implements ChatRuntime {
     const settings = this.getSettings();
 
     if (!this.currentSystemPrompt) {
-      this.currentSystemPrompt = this.buildSystemPrompt();
+      this.currentSystemPrompt = this.buildSystemPromptText();
     }
 
-    const tools = this.buildToolRegistry();
-    const prefix = new ImmutablePrefix({
-      system: this.currentSystemPrompt,
-      toolSpecs: tools.specs(),
-      fewShots: [],
-    });
-
     const client = this.ensureClient();
-    this.loop = new CacheFirstLoop({
-      client,
-      prefix,
-      tools,
-      model: settings.model || 'deepseek-v4-flash',
-      reasoningEffort: settings.reasoningEffort || 'high',
-      maxOutputTokens: settings.maxOutputTokens || undefined,
-      budgetUsd: settings.budgetUsd ?? undefined,
-      session: this.sessionId ?? undefined,
-      hookCwd: this.vaultPath(),
-    });
 
-    // Load conversation history
+    // Build messages array
+    const messages: ReasonixChatMessage[] = [
+      { role: 'system', content: this.currentSystemPrompt },
+    ];
+
+    // Add conversation history
     if (conversationHistory?.length) {
       for (const msg of conversationHistory) {
-        this.loop.log.append({
-          role: msg.role,
+        messages.push({
+          role: msg.role as 'user' | 'assistant',
           content: msg.content,
-        } as any);
+        });
       }
     }
 
+    // Add current user message
+    messages.push({
+      role: 'user',
+      content: turn.persistedContent,
+    });
+
     yield { type: 'user_message_start', content: turn.persistedContent };
 
+    let assistantContent = '';
+
     try {
-      for await (const event of this.loop.step(turn.persistedContent)) {
+      const stream = client.stream({
+        model: settings.model || 'deepseek-v4-flash',
+        messages,
+        maxTokens: settings.maxOutputTokens || undefined,
+        reasoningEffort: settings.reasoningEffort || 'high',
+      });
+
+      for await (const chunk of stream) {
         if (this._cancelled) break;
-        const chunk = this.mapLoopEvent(event);
-        if (chunk) yield chunk;
+
+        if (chunk.contentDelta) {
+          assistantContent += chunk.contentDelta;
+          yield { type: 'text', content: chunk.contentDelta };
+        }
+
+        if (chunk.reasoningDelta) {
+          yield { type: 'thinking', content: chunk.reasoningDelta };
+        }
+
+        if (chunk.usage) {
+          const u = chunk.usage;
+          const ctxTokens = u.totalTokens;
+          yield {
+            type: 'usage',
+            usage: {
+              model: settings.model,
+              inputTokens: u.promptTokens,
+              cacheCreationInputTokens: u.promptCacheMissTokens,
+              cacheReadInputTokens: u.promptCacheHitTokens,
+              contextWindow: 128000,
+              contextTokens: ctxTokens,
+              percentage: Math.round((ctxTokens / 128000) * 100),
+            },
+          };
+        }
       }
     } catch (err: any) {
       if (!this._cancelled) {
@@ -213,45 +206,13 @@ export class ReasonixChatRuntime implements ChatRuntime {
       }
     }
 
-    yield { type: 'done' };
-  }
-
-  private mapLoopEvent(event: LoopEvent): StreamChunk | null {
-    switch (event.role) {
-      case 'assistant_delta':
-      case 'assistant_final':
-        return { type: 'text', content: event.content };
-
-      case 'tool_start':
-        return {
-          type: 'tool_use',
-          id: event.callId ?? `tool-${Date.now()}`,
-          name: event.toolName ?? 'unknown',
-          input: safeParseJson(event.toolArgs) ?? {},
-        };
-
-      case 'tool':
-        return {
-          type: 'tool_result',
-          id: event.callId ?? '',
-          content: event.content,
-        };
-
-      case 'tool_call_delta':
-      case 'status':
-      case 'steer':
-        return null;
-
-      case 'error':
-        return { type: 'error', content: event.error ?? event.content };
-
-      case 'warning':
-        return { type: 'notice', content: event.content, level: 'warning' as const };
-
-      case 'done':
-      default:
-        return null;
+    // Store in history
+    if (assistantContent) {
+      this.messageHistory.push({ role: 'user', content: turn.persistedContent });
+      this.messageHistory.push({ role: 'assistant', content: assistantContent });
     }
+
+    yield { type: 'done' };
   }
 
   steer(_turn: PreparedChatTurn): Promise<boolean> {
@@ -260,11 +221,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
 
   cancel(): void {
     this._cancelled = true;
-    this.loop?.abort();
   }
 
   resetSession(): void {
-    this.loop?.clearLog();
+    this.messageHistory = [];
     this._cancelled = false;
   }
 
@@ -287,8 +247,8 @@ export class ReasonixChatRuntime implements ChatRuntime {
   cleanup(): void {
     this.cancel();
     this.client = null;
-    this.loop = null;
     this.currentSystemPrompt = '';
+    this.messageHistory = [];
   }
 
   async rewind(
@@ -303,19 +263,11 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   setApprovalDismisser(_dismisser: (() => void) | null): void {}
-
-  setAskUserQuestionCallback(callback: AskUserQuestionCallback | null): void {
-    this.askUserQuestionCallback = callback;
-  }
-
-  setExitPlanModeCallback(callback: ExitPlanModeCallback | null): void {
-    this.exitPlanModeCallback = callback;
-  }
-
+  setAskUserQuestionCallback(_callback: AskUserQuestionCallback | null): void {}
+  setExitPlanModeCallback(_callback: ExitPlanModeCallback | null): void {}
   setPermissionModeSyncCallback(
     _callback: ((sdkMode: string) => void) | null,
   ): void {}
-
   setSubagentHookProvider(_getState: () => SubagentRuntimeState): void {}
 
   setAutoTurnCallback(
@@ -338,15 +290,6 @@ export class ReasonixChatRuntime implements ChatRuntime {
   resolveSessionIdForFork(
     _conversation: Conversation | null,
   ): string | null {
-    return null;
-  }
-}
-
-function safeParseJson(raw: string | undefined): Record<string, unknown> | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch {
     return null;
   }
 }

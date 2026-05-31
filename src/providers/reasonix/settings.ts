@@ -6,7 +6,7 @@ export interface ReasonixProviderSettings {
   apiKey: string;
   baseUrl: string;
   model: string;
-  reasoningEffort: 'low' | 'medium' | 'high';
+  reasoningEffort: 'low' | 'medium' | 'high' | 'max';
   maxOutputTokens: number;
   budgetUsd: number | null;
   maxIterPerTurn: number;

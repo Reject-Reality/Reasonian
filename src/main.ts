@@ -21,7 +21,7 @@ import type {
   ConversationMeta,
 } from './core/types';
 import {
-  VIEW_TYPE_CLAUDIAN,
+  VIEW_TYPE_REASONIAN,
 } from './core/types';
 import { ClaudianView } from './features/chat/ClaudianView';
 import { type InlineEditContext, InlineEditModal } from './features/inline-edit/ui/InlineEditModal';
@@ -46,12 +46,18 @@ export default class ClaudianPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
+    // Wire vault adapter to Reasonian history service for message persistence
+    const historyService = ProviderRegistry.getConversationHistoryService(DEFAULT_CHAT_PROVIDER_ID) as any;
+    if (historyService && typeof historyService.setVaultAdapter === 'function') {
+      historyService.setVaultAdapter(this.app.vault.adapter);
+    }
+
     this.registerView(
-      VIEW_TYPE_CLAUDIAN,
+      VIEW_TYPE_REASONIAN,
       (leaf) => new ClaudianView(leaf, this)
     );
 
-    this.addRibbonIcon('bot', 'Open Reasonian', () => {
+    this.addRibbonIcon('cpu', 'Open Reasonix', () => {
       this.activateView();
     });
 
@@ -126,7 +132,7 @@ export default class ClaudianPlugin extends Plugin {
       id: 'new-session',
       name: 'New session (in current tab)',
       checkCallback: (checking: boolean) => {
-        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_REASONIAN)[0];
         if (!leaf) return false;
 
         const view = leaf.view as ClaudianView;
@@ -149,7 +155,7 @@ export default class ClaudianPlugin extends Plugin {
       id: 'close-current-tab',
       name: 'Close current tab',
       checkCallback: (checking: boolean) => {
-        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_REASONIAN)[0];
         if (!leaf) return false;
 
         const view = leaf.view as ClaudianView;
@@ -181,7 +187,7 @@ export default class ClaudianPlugin extends Plugin {
 
   async activateView() {
     const { workspace } = this.app;
-    let leaf = workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_REASONIAN)[0];
 
     if (!leaf) {
       const newLeaf = this.settings.openInMainTab
@@ -189,7 +195,7 @@ export default class ClaudianPlugin extends Plugin {
         : workspace.getRightLeaf(false);
       if (newLeaf) {
         await newLeaf.setViewState({
-          type: VIEW_TYPE_CLAUDIAN,
+          type: VIEW_TYPE_REASONIAN,
           active: true,
         });
         leaf = newLeaf;
@@ -375,6 +381,12 @@ export default class ClaudianPlugin extends Plugin {
       this.storage.sessions.toSessionMetadata(conversation)
     );
 
+    // Persist messages to Reasonian message store
+    const historyService = ProviderRegistry.getConversationHistoryService(conversation.providerId) as any;
+    if (typeof historyService.saveMessages === 'function') {
+      await historyService.saveMessages(conversation);
+    }
+
     if (!ProviderRegistry.getConversationHistoryService(conversation.providerId).isPendingForkConversation(conversation)) {
       for (const msg of conversation.messages) {
         if (msg.images) {
@@ -424,7 +436,7 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   getView(): ClaudianView | null {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_REASONIAN);
     if (leaves.length > 0) {
       return leaves[0].view as ClaudianView;
     }
@@ -432,7 +444,7 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   getAllViews(): ClaudianView[] {
-    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
+    const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_REASONIAN);
     return leaves.map(leaf => leaf.view as ClaudianView);
   }
 
