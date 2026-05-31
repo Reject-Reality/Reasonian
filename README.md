@@ -1,5 +1,7 @@
 # Reasonian
 
+**Reasonian** embeds [Reasonix](https://github.com/esengine/DeepSeek-Reasonix) — the native DeepSeek coding agent — into your Obsidian sidebar. It provides file read/write, search, shell commands, MCP tools, and multi-step workflows directly inside your vault.
+
 [Reasonix](https://github.com/esengine/DeepSeek-Reasonix) 是 DeepSeek 原生的编程 Agent。  
 **Reasonian** 将 Reasonix 嵌入到 Obsidian 的侧边栏中，让你在笔记库中直接获得 Agent 辅助：文件读写、搜索、Shell 命令、MCP 工具、多步工作流。
 

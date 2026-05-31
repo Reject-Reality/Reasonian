@@ -5,6 +5,6 @@
   "minAppVersion": "1.4.5",
   "description": "Embeds Reasonix (DeepSeek) as an AI collaborator in your vault. Full agentic capabilities: file read/write, search, bash commands, and multi-step workflows.",
   "author": "Reasonian",
-  "authorUrl": "https://github.com/Reject-Reality/Reasonian",
+  "authorUrl": "https://github.com/Reject-Reality",
   "isDesktopOnly": true
 }
