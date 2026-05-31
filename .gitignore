@@ -90,12 +90,5 @@ dev
 # yarn.lock
 # package-lock.json
 
-# Reasonian — upstream projects (reference only)
-claudian/
-DeepSeek-Reasonix/
-
-# Reasonian — design docs (internal)
-REASONIAN-DESIGN.md
-
 # Reasonix runtime data (generated at runtime, not committed)
 .reasonix/
