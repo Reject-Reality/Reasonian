@@ -10,12 +10,7 @@ import {
   readFileSync,
   rmSync,
 } from 'fs';
-import rendererSafeUnrefHelpers from './scripts/rendererSafeUnref.js';
 
-const {
-  findUnsafeTimerUnrefSites,
-  patchRendererUnsafeUnrefSites,
-} = rendererSafeUnrefHelpers;
 
 // Load .env.local if it exists
 if (existsSync('.env.local')) {
@@ -29,22 +24,6 @@ if (existsSync('.env.local')) {
 }
 
 const prod = process.argv[2] === 'production';
-
-const patchCodexSdkImportMeta = {
-  name: 'patch-codex-sdk-import-meta',
-  setup(build) {
-    build.onLoad(
-      { filter: /[\\/]node_modules[\\/]@openai[\\/]codex-sdk[\\/]dist[\\/]index\.js$/ },
-      async (args) => {
-        const contents = await fsPromises.readFile(args.path, 'utf8');
-        return {
-          contents: contents.replace('createRequire(import.meta.url)', 'createRequire(__filename)'),
-          loader: 'js',
-        };
-      },
-    );
-  },
-};
 
 const patchReasonixImportMeta = {
   name: 'patch-reasonix-import-meta',
@@ -74,39 +53,12 @@ const patchReasonixImportMeta = {
   },
 };
 
-const patchRendererUnsafeUnref = {
-  name: 'patch-renderer-unsafe-unref',
-  setup(build) {
-    build.onEnd(async (result) => {
-      if (result.errors.length > 0 || !existsSync('main.js')) return;
 
-      const bundlePath = path.join(process.cwd(), 'main.js');
-      const originalContents = await fsPromises.readFile(bundlePath, 'utf8');
-      const patchedBundle = patchRendererUnsafeUnrefSites(originalContents);
-
-      if (patchedBundle.contents !== originalContents) {
-        await fsPromises.writeFile(bundlePath, patchedBundle.contents, 'utf8');
-      }
-
-      const unsafeMatches = findUnsafeTimerUnrefSites(patchedBundle.contents);
-      if (unsafeMatches.length > 0) {
-        const details = unsafeMatches
-          .slice(0, 5)
-          .map((match) => `line ${match.line}: ${match.snippet}`)
-          .join('\n');
-
-        throw new Error(
-          `Renderer-unsafe timer .unref() calls remain in main.js:\n${details}`,
-        );
-      }
-    });
-  },
-};
 
 // Obsidian plugin folder path (set via OBSIDIAN_VAULT env var or .env.local)
 const OBSIDIAN_VAULT = process.env.OBSIDIAN_VAULT;
 const OBSIDIAN_PLUGIN_PATH = OBSIDIAN_VAULT && existsSync(OBSIDIAN_VAULT)
-  ? path.join(OBSIDIAN_VAULT, '.obsidian', 'plugins', 'claudian')
+  ? path.join(OBSIDIAN_VAULT, '.obsidian', 'plugins', 'reasonian')
   : null;
 
 // Plugin to copy built files to Obsidian plugin folder
@@ -115,8 +67,6 @@ const copyToObsidian = {
   setup(build) {
     build.onEnd((result) => {
       if (result.errors.length > 0) return;
-      rmSync(path.join(process.cwd(), '.codex-vendor'), { recursive: true, force: true });
-
       if (!OBSIDIAN_PLUGIN_PATH) return;
 
       if (!existsSync(OBSIDIAN_PLUGIN_PATH)) {
@@ -131,8 +81,7 @@ const copyToObsidian = {
         }
       }
 
-      const pluginVendorRoot = path.join(OBSIDIAN_PLUGIN_PATH, '.codex-vendor');
-      rmSync(pluginVendorRoot, { recursive: true, force: true });
+      // Reasonix is bundled in main.js — no vendor directory needed
     });
   }
 };
@@ -140,7 +89,7 @@ const copyToObsidian = {
 const context = await esbuild.context({
   entryPoints: ['src/main.ts'],
   bundle: true,
-  plugins: [patchCodexSdkImportMeta, patchReasonixImportMeta, patchRendererUnsafeUnref, copyToObsidian],
+  plugins: [patchReasonixImportMeta, copyToObsidian],
   external: [
     'obsidian',
     'electron',
