@@ -34,6 +34,28 @@ if (existsSync('.env.local')) {
 }
 
 const prod = process.argv[2] === 'production';
+const REASONIX_ROOT = path.resolve('..', 'DeepSeek-Reasonix');
+const REASONIX_GRAMMAR_SOURCES = [
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-typescript', 'tree-sitter-typescript.wasm'), 'tree-sitter-typescript.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-typescript', 'tree-sitter-tsx.wasm'), 'tree-sitter-tsx.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-javascript', 'tree-sitter-javascript.wasm'), 'tree-sitter-javascript.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-python', 'tree-sitter-python.wasm'), 'tree-sitter-python.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-go', 'tree-sitter-go.wasm'), 'tree-sitter-go.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-rust', 'tree-sitter-rust.wasm'), 'tree-sitter-rust.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'tree-sitter-java', 'tree-sitter-java.wasm'), 'tree-sitter-java.wasm'],
+  [path.join(REASONIX_ROOT, 'node_modules', 'web-tree-sitter', 'web-tree-sitter.wasm'), 'web-tree-sitter.wasm'],
+];
+
+function copyReasonixGrammars(targetDir) {
+  mkdirSync(targetDir, { recursive: true });
+  for (const [source, filename] of REASONIX_GRAMMAR_SOURCES) {
+    if (!existsSync(source)) {
+      console.warn(`Reasonix grammar asset missing: ${source}`);
+      continue;
+    }
+    copyFileSync(source, path.join(targetDir, filename));
+  }
+}
 
 const patchReasonixImportMeta = {
   name: 'patch-reasonix-import-meta',
@@ -91,7 +113,9 @@ const copyToObsidian = {
         }
       }
 
-      // Reasonix is bundled in main.js — no vendor directory needed
+      // Reasonix JavaScript is bundled in main.js; tree-sitter needs wasm assets.
+      copyReasonixGrammars(path.join(OBSIDIAN_PLUGIN_PATH, 'grammars'));
+      console.log('Copied Reasonix grammar assets to Obsidian plugin folder');
     });
   }
 };

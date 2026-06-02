@@ -10,11 +10,14 @@ import {
   bridgeMcpTools,
   registerChoiceTool,
   registerFilesystemTools,
+  registerCodeQueryTools,
   registerMemoryTools,
   registerPlanTool,
   registerShellTools,
   registerTodoTool,
+  setGrammarDir,
 } from 'reasonix';
+import * as path from 'path';
 import type {
   CacheFirstLoopOptions,
   ChatMessage as ReasonixChatMessage,
@@ -185,6 +188,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerChoiceTool(registry);
     registerTodoTool(registry);
     this.registerVaultFilesystemTools(registry);
+    this.registerVaultCodeQueryTools(registry);
     this.registerShellCommandTools(registry);
     this.registerSafeMemoryTools(registry);
     return registry;
@@ -195,6 +199,32 @@ export class ReasonixChatRuntime implements ChatRuntime {
       rootDir: this.vaultPath(),
       allowWriting: true,
     });
+  }
+
+  private registerVaultCodeQueryTools(registry: ToolRegistry): void {
+    const grammarDir = this.reasonixGrammarDir();
+    if (grammarDir) {
+      setGrammarDir(grammarDir);
+    }
+
+    registerCodeQueryTools(registry, {
+      rootDir: this.vaultPath(),
+    });
+  }
+
+  private reasonixGrammarDir(): string | null {
+    const vaultPath = this.vaultPath();
+    if (!vaultPath || !this.plugin?.manifest) {
+      return null;
+    }
+
+    const manifest = this.plugin.manifest as { dir?: string; id?: string };
+    const pluginDirName = manifest.dir || manifest.id;
+    if (!pluginDirName) {
+      return null;
+    }
+
+    return path.join(vaultPath, '.obsidian', 'plugins', pluginDirName, 'grammars');
   }
 
   private registerShellCommandTools(registry: ToolRegistry): void {
