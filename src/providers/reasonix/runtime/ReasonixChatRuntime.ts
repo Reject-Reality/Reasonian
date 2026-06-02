@@ -9,6 +9,7 @@ import {
   ToolRegistry,
   bridgeMcpTools,
   registerChoiceTool,
+  registerFilesystemTools,
   registerMemoryTools,
   registerPlanTool,
   registerTodoTool,
@@ -182,8 +183,16 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerPlanTool(registry);
     registerChoiceTool(registry);
     registerTodoTool(registry);
+    this.registerReadOnlyFilesystemTools(registry);
     this.registerSafeMemoryTools(registry);
     return registry;
+  }
+
+  private registerReadOnlyFilesystemTools(registry: ToolRegistry): void {
+    registerFilesystemTools(registry, {
+      rootDir: this.vaultPath(),
+      allowWriting: false,
+    });
   }
 
   private registerSafeMemoryTools(registry: ToolRegistry): void {
