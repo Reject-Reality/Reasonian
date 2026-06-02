@@ -183,15 +183,15 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerPlanTool(registry);
     registerChoiceTool(registry);
     registerTodoTool(registry);
-    this.registerReadOnlyFilesystemTools(registry);
+    this.registerVaultFilesystemTools(registry);
     this.registerSafeMemoryTools(registry);
     return registry;
   }
 
-  private registerReadOnlyFilesystemTools(registry: ToolRegistry): void {
+  private registerVaultFilesystemTools(registry: ToolRegistry): void {
     registerFilesystemTools(registry, {
       rootDir: this.vaultPath(),
-      allowWriting: false,
+      allowWriting: true,
     });
   }
 
