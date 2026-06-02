@@ -16,6 +16,7 @@ import type {
   CacheFirstLoopOptions,
   ChatMessage as ReasonixChatMessage,
   LoopEvent,
+  MemoryEntry,
   ToolSpec,
 } from 'reasonix';
 
@@ -957,11 +958,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
     ].join('\n');
   }
 
-  private buildMemoryText(): string {
+  private buildMemoryText(args = ''): string {
     const settings = this.getSettings();
     const projectRoot = settings.projectMemoryRoot.trim() || this.vaultPath();
     const memoryHomeDir = settings.memoryHomeDir.trim() || undefined;
     const memoryHomeLabel = memoryHomeDir || '~/.reasonix';
+    const normalizedArgs = args.trim();
 
     if (!settings.memoryEnabled) {
       return [
@@ -999,6 +1001,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
       const globalIndex = store.loadIndex('global');
       const projectIndex = store.loadIndex('project');
 
+      if (normalizedArgs) {
+        return this.buildMemoryCommandText(normalizedArgs, entries);
+      }
+
       return [
         'Reasonix memory status:',
         '',
@@ -1016,6 +1022,101 @@ export class ReasonixChatRuntime implements ChatRuntime {
     } catch (error) {
       return `Reasonix memory status is unavailable: ${error instanceof Error ? error.message : String(error)}`;
     }
+  }
+
+  private buildMemoryCommandText(args: string, entries: MemoryEntry[]): string {
+    const [subcommandRaw, ...rest] = args.split(/\s+/);
+    const subcommand = subcommandRaw?.toLowerCase();
+
+    switch (subcommand) {
+      case 'status':
+        return this.buildMemoryText();
+      case 'list':
+        return this.buildMemoryListText(rest[0], entries);
+      case 'show':
+        return this.buildMemoryShowText(rest.join(' '), entries);
+      default:
+        return 'Usage: /memory [status|list [global|project]|show <name|scope/name>]';
+    }
+  }
+
+  private buildMemoryListText(scopeArg: string | undefined, entries: MemoryEntry[]): string {
+    const scope = scopeArg?.toLowerCase();
+    if (scope && scope !== 'global' && scope !== 'project') {
+      return 'Usage: /memory list [global|project]';
+    }
+
+    const filtered = scope
+      ? entries.filter((entry) => entry.scope === scope)
+      : entries;
+
+    if (filtered.length === 0) {
+      return scope
+        ? `No ${scope} Reasonix memory entries found.`
+        : 'No Reasonix memory entries found.';
+    }
+
+    const lines = filtered
+      .sort((a, b) => `${a.scope}/${a.name}`.localeCompare(`${b.scope}/${b.name}`))
+      .map((entry) => {
+        const priority = entry.priority ? `, priority=${entry.priority}` : '';
+        const type = entry.type ? `, type=${entry.type}` : '';
+        return `- ${entry.scope}/${entry.name}${type}${priority}: ${entry.description || '(no description)'}`;
+      });
+
+    return [
+      `Reasonix memory entries (${filtered.length}):`,
+      '',
+      ...lines,
+      '',
+      'Read one entry with /memory show <name> or /memory show <scope/name>.',
+    ].join('\n');
+  }
+
+  private buildMemoryShowText(target: string, entries: MemoryEntry[]): string {
+    const normalized = target.trim();
+    if (!normalized) {
+      return 'Usage: /memory show <name|scope/name>';
+    }
+
+    const [scopePart, namePart] = normalized.includes('/')
+      ? normalized.split('/', 2)
+      : [undefined, normalized];
+    const scope = scopePart?.toLowerCase();
+    if (scope && scope !== 'global' && scope !== 'project') {
+      return 'Usage: /memory show <name|scope/name>';
+    }
+
+    const matches = entries.filter((entry) => {
+      if (scope && entry.scope !== scope) {
+        return false;
+      }
+      return entry.name.toLowerCase() === namePart.toLowerCase();
+    });
+
+    if (matches.length === 0) {
+      return `No Reasonix memory entry found for "${normalized}".`;
+    }
+    if (matches.length > 1) {
+      return `Multiple entries match "${normalized}". Use /memory show global/${namePart} or /memory show project/${namePart}.`;
+    }
+
+    const entry = matches[0];
+    const body = entry.body.length > 6000
+      ? `${entry.body.slice(0, 6000)}\n\n[truncated ${entry.body.length - 6000} chars]`
+      : entry.body;
+
+    return [
+      `Reasonix memory: ${entry.scope}/${entry.name}`,
+      '',
+      `- type: ${entry.type}`,
+      `- description: ${entry.description || '(none)'}`,
+      `- created: ${entry.createdAt || '(unknown)'}`,
+      entry.priority ? `- priority: ${entry.priority}` : '',
+      entry.expires ? `- expires: ${entry.expires}` : '',
+      '',
+      body || '(empty)',
+    ].filter((line) => line !== '').join('\n');
   }
 
   private normalizeModelId(input: string): string {
@@ -1179,7 +1280,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       case 'mcp':
         return { content: this.buildMcpText() };
       case 'memory':
-        return { content: this.buildMemoryText() };
+        return { content: this.buildMemoryText(parsed.args) };
       case 'help':
         return { content: this.buildHelpText() };
       case 'model':
