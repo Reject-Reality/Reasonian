@@ -12,6 +12,7 @@ import {
   registerFilesystemTools,
   registerMemoryTools,
   registerPlanTool,
+  registerShellTools,
   registerTodoTool,
 } from 'reasonix';
 import type {
@@ -184,6 +185,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerChoiceTool(registry);
     registerTodoTool(registry);
     this.registerVaultFilesystemTools(registry);
+    this.registerShellCommandTools(registry);
     this.registerSafeMemoryTools(registry);
     return registry;
   }
@@ -192,6 +194,13 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerFilesystemTools(registry, {
       rootDir: this.vaultPath(),
       allowWriting: true,
+    });
+  }
+
+  private registerShellCommandTools(registry: ToolRegistry): void {
+    registerShellTools(registry, {
+      rootDir: this.vaultPath(),
+      allowAll: false,
     });
   }
 
@@ -446,8 +455,20 @@ export class ReasonixChatRuntime implements ChatRuntime {
             });
           case 'run_command':
           case 'run_background':
+            return await this.handleCommandConfirmationPause(kind, payload as {
+              command: string;
+              cwd?: string;
+              timeoutSec?: number;
+              waitSec?: number;
+            });
           case 'path_access':
-            return { type: 'deny' };
+            return await this.handlePathAccessPause(payload as {
+              path: string;
+              intent: 'read' | 'write';
+              toolName: string;
+              sandboxRoot: string;
+              allowPrefix: string;
+            });
           default:
             return { type: 'cancel' };
         }
@@ -906,6 +927,71 @@ export class ReasonixChatRuntime implements ChatRuntime {
       return { type: 'cancelled' };
     }
     return { type: 'rejected' };
+  }
+
+  private async handleCommandConfirmationPause(
+    kind: 'run_command' | 'run_background',
+    payload: {
+      command: string;
+      cwd?: string;
+      timeoutSec?: number;
+      waitSec?: number;
+    },
+  ): Promise<
+    | { type: 'run_once' }
+    | { type: 'always_allow'; prefix: string }
+    | { type: 'deny'; denyContext?: string }
+  > {
+    if (!this.approvalCallback) {
+      return { type: 'deny', denyContext: 'No approval UI is available.' };
+    }
+
+    const decision = await this.approvalCallback(
+      kind,
+      payload as Record<string, unknown>,
+      `${kind === 'run_background' ? 'Start background command' : 'Run command'}: ${payload.command}`,
+    );
+
+    if (decision === 'allow') {
+      return { type: 'run_once' };
+    }
+    if (decision === 'allow-always') {
+      return {
+        type: 'always_allow',
+        prefix: payload.command.split(/\s+/).filter(Boolean)[0] ?? payload.command,
+      };
+    }
+    return { type: 'deny' };
+  }
+
+  private async handlePathAccessPause(payload: {
+    path: string;
+    intent: 'read' | 'write';
+    toolName: string;
+    sandboxRoot: string;
+    allowPrefix: string;
+  }): Promise<
+    | { type: 'run_once' }
+    | { type: 'always_allow'; prefix: string }
+    | { type: 'deny'; denyContext?: string }
+  > {
+    if (!this.approvalCallback) {
+      return { type: 'deny', denyContext: 'No approval UI is available.' };
+    }
+
+    const decision = await this.approvalCallback(
+      payload.toolName,
+      payload as unknown as Record<string, unknown>,
+      `${payload.toolName} requests ${payload.intent} access to ${payload.path}`,
+    );
+
+    if (decision === 'allow') {
+      return { type: 'run_once' };
+    }
+    if (decision === 'allow-always') {
+      return { type: 'always_allow', prefix: payload.allowPrefix };
+    }
+    return { type: 'deny' };
   }
 
   private looksLikeCompactionWarning(event: LoopEvent): boolean {
