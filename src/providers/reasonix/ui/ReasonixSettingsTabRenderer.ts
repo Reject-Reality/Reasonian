@@ -8,6 +8,10 @@ import type {
 } from '../../../core/providers/types';
 import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/EnvironmentSettingsSection';
 import { McpSettingsManager } from '../../../features/settings/ui/McpSettingsManager';
+import {
+  getReasonixProviderSettings,
+  updateReasonixProviderSettings,
+} from '../settings';
 
 export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer {
   constructor(
@@ -19,6 +23,55 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
     container.empty();
 
     new Setting(container).setName('Reasonix Workspace').setHeading();
+    const settings = getReasonixProviderSettings(
+      context.plugin.settings as unknown as Record<string, unknown>,
+    );
+
+    const memorySection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    new Setting(memorySection)
+      .setName('Reasonix Memory')
+      .setDesc('Load Reasonix project memory and user memory into the system prompt.');
+
+    new Setting(memorySection)
+      .setName('Enable memory')
+      .setDesc('Includes project memory plus global and project-scoped Reasonix user memory.')
+      .addToggle((toggle) => toggle
+        .setValue(settings.memoryEnabled)
+        .onChange(async (value) => {
+          updateReasonixProviderSettings(
+            context.plugin.settings as unknown as Record<string, unknown>,
+            { memoryEnabled: value },
+          );
+          await context.plugin.saveSettings();
+        }));
+
+    new Setting(memorySection)
+      .setName('Project memory root')
+      .setDesc('Folder used for REASONIX.md and project-scoped memory. Empty uses the current vault root.')
+      .addText((text) => text
+        .setPlaceholder('Empty = vault root')
+        .setValue(settings.projectMemoryRoot)
+        .onChange(async (value) => {
+          updateReasonixProviderSettings(
+            context.plugin.settings as unknown as Record<string, unknown>,
+            { projectMemoryRoot: value.trim() },
+          );
+          await context.plugin.saveSettings();
+        }));
+
+    new Setting(memorySection)
+      .setName('Reasonix home')
+      .setDesc('Folder used for global Reasonix memory. Empty uses ~/.reasonix.')
+      .addText((text) => text
+        .setPlaceholder('Empty = ~/.reasonix')
+        .setValue(settings.memoryHomeDir)
+        .onChange(async (value) => {
+          updateReasonixProviderSettings(
+            context.plugin.settings as unknown as Record<string, unknown>,
+            { memoryHomeDir: value.trim() },
+          );
+          await context.plugin.saveSettings();
+        }));
 
     const mcpSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
     new Setting(mcpSection)

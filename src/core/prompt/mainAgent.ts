@@ -5,6 +5,8 @@ export interface SystemPromptSettings {
   userName?: string;
   /** Enable Reasonix memory injection (REASONIX.md + user memory). */
   memoryEnabled?: boolean;
+  /** Project root used for Reasonix project and project-scoped user memory. */
+  memoryProjectRoot?: string;
   /** Override ~/.reasonix home dir for memory storage. */
   memoryHomeDir?: string;
 }
@@ -189,8 +191,9 @@ export function buildSystemPrompt(
       // Dynamic import to avoid bundling reasonix memory in non-memory builds
       const { applyProjectMemory, applyMemoryStack, memoryEnabled } = require('reasonix') as typeof import('reasonix');
       if (memoryEnabled()) {
-        prompt = applyProjectMemory(prompt, settings.vaultPath);
-        prompt = applyMemoryStack(prompt, settings.vaultPath, {
+        const memoryProjectRoot = settings.memoryProjectRoot || settings.vaultPath;
+        prompt = applyProjectMemory(prompt, memoryProjectRoot);
+        prompt = applyMemoryStack(prompt, memoryProjectRoot, {
           homeDir: settings.memoryHomeDir,
         });
       }
@@ -222,6 +225,9 @@ export function computeSystemPromptKey(
     settings.mediaFolder || '',
     settings.customPrompt || '',
     settings.vaultPath || '',
+    settings.memoryEnabled === false ? 'memory-off' : 'memory-on',
+    settings.memoryProjectRoot || '',
+    settings.memoryHomeDir || '',
     (settings.userName || '').trim(),
   ];
 

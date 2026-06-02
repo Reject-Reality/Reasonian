@@ -13,6 +13,9 @@ export interface ReasonixProviderSettings {
   lastModel: string;
   environmentVariables: string;
   environmentHash: string;
+  memoryEnabled: boolean;
+  projectMemoryRoot: string;
+  memoryHomeDir: string;
 }
 
 export const DEFAULT_REASONIX_PROVIDER_SETTINGS: Readonly<ReasonixProviderSettings> = Object.freeze({
@@ -26,6 +29,9 @@ export const DEFAULT_REASONIX_PROVIDER_SETTINGS: Readonly<ReasonixProviderSettin
   lastModel: 'deepseek-v4-flash',
   environmentVariables: '',
   environmentHash: '',
+  memoryEnabled: true,
+  projectMemoryRoot: '',
+  memoryHomeDir: '',
 });
 
 export function getReasonixProviderSettings(
@@ -50,6 +56,12 @@ export function getReasonixProviderSettings(
       ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.environmentVariables,
     environmentHash: (config.environmentHash as string)
       ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.environmentHash,
+    memoryEnabled: (config.memoryEnabled as boolean)
+      ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.memoryEnabled,
+    projectMemoryRoot: (config.projectMemoryRoot as string)
+      ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.projectMemoryRoot,
+    memoryHomeDir: (config.memoryHomeDir as string)
+      ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.memoryHomeDir,
   };
 }
 

@@ -42,6 +42,15 @@ export const REASONIX_STATIC_COMMANDS: SlashCommand[] = [
     disableModelInvocation: true,
   },
   {
+    id: 'reasonix:memory',
+    name: 'memory',
+    description: 'Show Reasonix memory status',
+    content: '',
+    source: 'sdk',
+    kind: 'command',
+    disableModelInvocation: true,
+  },
+  {
     id: 'reasonix:help',
     name: 'help',
     description: 'Show supported Reasonix commands in Obsidian',

@@ -144,13 +144,17 @@ export class ReasonixChatRuntime implements ChatRuntime {
   private buildSystemPromptText(): string {
     const vaultPath = this.vaultPath();
     const pluginSettings = this.plugin?.settings;
+    const settings = this.getSettings();
+    const memoryRoot = settings.projectMemoryRoot.trim() || vaultPath;
 
     return buildSystemPrompt({
       vaultPath,
       userName: pluginSettings?.userName,
       mediaFolder: pluginSettings?.mediaFolder,
       customPrompt: pluginSettings?.systemPrompt,
-      memoryEnabled: true,
+      memoryEnabled: settings.memoryEnabled,
+      memoryProjectRoot: memoryRoot,
+      memoryHomeDir: settings.memoryHomeDir.trim() || undefined,
     });
   }
 
@@ -901,6 +905,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       `- session: ${this.sessionId ?? 'not started'}`,
       `- ready: ${this.isReady() ? 'yes' : 'no API key configured'}`,
       `- MCP servers: ${activeMcp}`,
+      `- memory: ${settings.memoryEnabled ? 'enabled' : 'disabled'}`,
     ].join('\n');
   }
 
@@ -950,6 +955,67 @@ export class ReasonixChatRuntime implements ChatRuntime {
         return `- ${server.name}: ${state}${contextSaving}${disabledTools}`;
       }),
     ].join('\n');
+  }
+
+  private buildMemoryText(): string {
+    const settings = this.getSettings();
+    const projectRoot = settings.projectMemoryRoot.trim() || this.vaultPath();
+    const memoryHomeDir = settings.memoryHomeDir.trim() || undefined;
+    const memoryHomeLabel = memoryHomeDir || '~/.reasonix';
+
+    if (!settings.memoryEnabled) {
+      return [
+        'Reasonix memory is disabled in Reasonian settings.',
+        '',
+        `- project memory root: ${projectRoot}`,
+        `- Reasonix home: ${memoryHomeLabel}`,
+      ].join('\n');
+    }
+
+    try {
+      const {
+        MemoryStore,
+        memoryEnabled,
+        readProjectMemory,
+      } = require('reasonix') as typeof import('reasonix');
+
+      if (!memoryEnabled()) {
+        return [
+          'Reasonix memory is disabled by the REASONIX_MEMORY environment variable.',
+          '',
+          `- project memory root: ${projectRoot}`,
+          `- Reasonix home: ${memoryHomeLabel}`,
+        ].join('\n');
+      }
+
+      const projectMemory = readProjectMemory(projectRoot);
+      const store = new MemoryStore({
+        homeDir: memoryHomeDir,
+        projectRoot,
+      });
+      const entries = store.list();
+      const globalCount = entries.filter((entry) => entry.scope === 'global').length;
+      const projectCount = entries.filter((entry) => entry.scope === 'project').length;
+      const globalIndex = store.loadIndex('global');
+      const projectIndex = store.loadIndex('project');
+
+      return [
+        'Reasonix memory status:',
+        '',
+        `- project memory root: ${projectRoot}`,
+        `- Reasonix home: ${memoryHomeLabel}`,
+        `- project memory file: ${projectMemory ? projectMemory.path : 'not found'}`,
+        projectMemory
+          ? `- project memory chars: ${projectMemory.originalChars.toLocaleString()}${projectMemory.truncated ? ' (truncated)' : ''}`
+          : '- project memory chars: 0',
+        `- global memory entries: ${globalCount}`,
+        `- project memory entries: ${projectCount}`,
+        `- global MEMORY.md: ${globalIndex ? `${globalIndex.originalChars.toLocaleString()} chars${globalIndex.truncated ? ' (truncated)' : ''}` : 'not found'}`,
+        `- project MEMORY.md: ${projectIndex ? `${projectIndex.originalChars.toLocaleString()} chars${projectIndex.truncated ? ' (truncated)' : ''}` : 'not found'}`,
+      ].join('\n');
+    } catch (error) {
+      return `Reasonix memory status is unavailable: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
 
   private normalizeModelId(input: string): string {
@@ -1112,6 +1178,8 @@ export class ReasonixChatRuntime implements ChatRuntime {
         return { content: this.buildContextText() };
       case 'mcp':
         return { content: this.buildMcpText() };
+      case 'memory':
+        return { content: this.buildMemoryText() };
       case 'help':
         return { content: this.buildHelpText() };
       case 'model':
