@@ -7,7 +7,7 @@ export const REASONIX_PROVIDER_CAPABILITIES: Readonly<ProviderCapabilities> = Ob
   supportsPlanMode: true,            // registerPlanTool()
   supportsRewind: false,             // Not in scope for v1
   supportsFork: false,               // Not in scope for v1
-  supportsProviderCommands: false,   // No runtime command discovery
+  supportsProviderCommands: true,    // Static Reasonix command catalog
   supportsImageAttachments: true,    // Image paste support
   supportsInstructionMode: true,     // Instruction refinement
   supportsMcpTools: true,            // McpClient

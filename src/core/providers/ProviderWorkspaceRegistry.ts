@@ -1,22 +1,44 @@
+import type { McpServerManager } from '../mcp/McpServerManager';
 import type { ProviderCommandCatalog } from './commands/ProviderCommandCatalog';
 import type {
   AgentMentionProvider,
   ProviderCliResolver,
   ProviderId,
   ProviderSettingsTabRenderer,
+  ProviderWorkspaceInitContext,
+  ProviderWorkspaceRegistration,
+  ProviderWorkspaceServices,
 } from './types';
+import { reasonixWorkspaceRegistration } from '../../providers/reasonix/app/ReasonixWorkspaceServices';
 
-/**
- * Simplified workspace registry for single-provider (Reasonix).
- * All methods return null — no CLI, no runtime command catalogs, no agent mentions.
- * Kept as a stub so existing feature code doesn't break.
- */
+const WORKSPACE_REGISTRATIONS: Partial<Record<ProviderId, ProviderWorkspaceRegistration>> = {
+  reasonix: reasonixWorkspaceRegistration,
+};
+
 export class ProviderWorkspaceRegistry {
-  private static services: Partial<Record<ProviderId, any>> = {};
+  private static services: Partial<Record<ProviderId, ProviderWorkspaceServices>> = {};
 
-  static async initializeAll(): Promise<void> {}
+  static async initializeAll(context: ProviderWorkspaceInitContext): Promise<void> {
+    this.clear();
 
-  static setServices(providerId: ProviderId, services: any | undefined): void {
+    for (const [providerId, registration] of Object.entries(WORKSPACE_REGISTRATIONS)) {
+      if (!registration) {
+        continue;
+      }
+
+      try {
+        const services = await registration.initialize(context);
+        this.setServices(providerId as ProviderId, services);
+      } catch (error) {
+        console.error(`Failed to initialize workspace services for provider "${providerId}"`, error);
+      }
+    }
+  }
+
+  static setServices(
+    providerId: ProviderId,
+    services: ProviderWorkspaceServices | undefined,
+  ): void {
     if (services) {
       this.services[providerId] = services;
     } else {
@@ -28,25 +50,27 @@ export class ProviderWorkspaceRegistry {
     this.services = {};
   }
 
-  static getCommandCatalog(_providerId: ProviderId): ProviderCommandCatalog | null {
-    return null;
+  static getCommandCatalog(providerId: ProviderId): ProviderCommandCatalog | null {
+    return this.services[providerId]?.commandCatalog ?? null;
   }
 
-  static getAgentMentionProvider(_providerId: ProviderId): AgentMentionProvider | null {
-    return null;
+  static getAgentMentionProvider(providerId: ProviderId): AgentMentionProvider | null {
+    return this.services[providerId]?.agentMentionProvider ?? null;
   }
 
-  static async refreshAgentMentions(_providerId: ProviderId): Promise<void> {}
-
-  static getCliResolver(_providerId: ProviderId): ProviderCliResolver | null {
-    return null;
+  static async refreshAgentMentions(providerId: ProviderId): Promise<void> {
+    await this.services[providerId]?.refreshAgentMentions?.();
   }
 
-  static getMcpServerManager(_providerId: ProviderId) {
-    return null;
+  static getCliResolver(providerId: ProviderId): ProviderCliResolver | null {
+    return this.services[providerId]?.cliResolver ?? null;
   }
 
-  static getSettingsTabRenderer(_providerId: ProviderId): ProviderSettingsTabRenderer | null {
-    return null;
+  static getMcpServerManager(providerId: ProviderId): McpServerManager | null {
+    return this.services[providerId]?.mcpServerManager ?? null;
+  }
+
+  static getSettingsTabRenderer(providerId: ProviderId): ProviderSettingsTabRenderer | null {
+    return this.services[providerId]?.settingsTabRenderer ?? null;
   }
 }

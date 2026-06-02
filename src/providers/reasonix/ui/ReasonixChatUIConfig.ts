@@ -25,7 +25,7 @@ const REASONING_OPTIONS: ProviderReasoningOption[] = [
   { value: 'max', label: 'Max', description: 'DeepSeek extended reasoning (max)' },
 ];
 
-const DEFAULT_CONTEXT_WINDOW = 128_000;
+const DEFAULT_CONTEXT_WINDOW = 1_000_000;
 
 export const reasonixChatUIConfig: ProviderChatUIConfig = {
   getModelOptions(): ProviderUIOption[] {

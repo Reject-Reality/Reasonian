@@ -12,9 +12,11 @@ import { SharedStorageService } from './app/storage/SharedStorageService';
 import type { SharedAppStorage } from './core/bootstrap/storage';
 import { ProviderRegistry } from './core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from './core/providers/ProviderSettingsCoordinator';
+import { ProviderWorkspaceRegistry } from './core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from './core/providers/types';
 import type { AppTabManagerState } from './core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from './core/providers/types';
+import { HomeFileAdapter } from './core/storage/HomeFileAdapter';
 import type {
   ClaudianSettings,
   Conversation,
@@ -46,10 +48,19 @@ export default class ClaudianPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    // Wire vault adapter to Reasonian history service for message persistence
-    const historyService = ProviderRegistry.getConversationHistoryService(DEFAULT_CHAT_PROVIDER_ID) as any;
-    if (historyService && typeof historyService.setVaultAdapter === 'function') {
-      historyService.setVaultAdapter(this.app.vault.adapter);
+    await ProviderWorkspaceRegistry.initializeAll({
+      plugin: this,
+      storage: this.storage,
+      vaultAdapter: this.storage.getAdapter(),
+      homeAdapter: new HomeFileAdapter(),
+    });
+
+    // Wire vault adapter to provider history services for message persistence
+    for (const providerId of ProviderRegistry.getRegisteredProviderIds()) {
+      const historyService = ProviderRegistry.getConversationHistoryService(providerId) as any;
+      if (historyService && typeof historyService.setVaultAdapter === 'function') {
+        historyService.setVaultAdapter(this.app.vault.adapter);
+      }
     }
 
     this.registerView(
@@ -176,6 +187,8 @@ export default class ClaudianPlugin extends Plugin {
   }
 
   async onunload() {
+    ProviderWorkspaceRegistry.clear();
+
     for (const view of this.getAllViews()) {
       const tabManager = view.getTabManager();
       if (tabManager) {
