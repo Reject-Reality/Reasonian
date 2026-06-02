@@ -8,7 +8,7 @@ export const REASONIX_PROVIDER_CAPABILITIES: Readonly<ProviderCapabilities> = Ob
   supportsRewind: false,             // Not in scope for v1
   supportsFork: false,               // Not in scope for v1
   supportsProviderCommands: true,    // Static Reasonix command catalog
-  supportsImageAttachments: true,    // Image paste support
+  supportsImageAttachments: false,   // Reasonix chat messages are text-only for now
   supportsInstructionMode: true,     // Instruction refinement
   supportsMcpTools: true,            // McpClient
   supportsTurnSteer: true,           // CacheFirstLoop.steer()

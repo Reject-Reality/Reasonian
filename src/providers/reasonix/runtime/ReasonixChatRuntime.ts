@@ -92,7 +92,7 @@ interface ParsedReasonixSlashCommand {
   args: string;
 }
 
-type ReasonixMemoryStoreHandle = Pick<import('reasonix').MemoryStore, 'delete'>;
+type ReasonixMemoryStoreHandle = Pick<import('reasonix').MemoryStore, 'delete' | 'write'>;
 
 export class ReasonixChatRuntime implements ChatRuntime {
   readonly providerId = PROVIDER_ID;
@@ -1060,10 +1060,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
         return this.buildMemoryListText(rest[0], entries);
       case 'show':
         return this.buildMemoryShowText(rest.join(' '), entries);
+      case 'write':
+        return this.buildMemoryWriteText(rest.join(' '), entries, store);
       case 'forget':
         return this.buildMemoryForgetText(rest.join(' '), entries, store);
       default:
-        return 'Usage: /memory [status|list [global|project]|show <name|scope/name>|forget <name|scope/name> confirm]';
+        return 'Usage: /memory [status|list [global|project]|show <name|scope/name>|write <scope/name> <description> :: <content>|forget <name|scope/name> confirm]';
     }
   }
 
@@ -1131,6 +1133,55 @@ export class ReasonixChatRuntime implements ChatRuntime {
       '',
       body || '(empty)',
     ].filter((line) => line !== '').join('\n');
+  }
+
+  private buildMemoryWriteText(
+    rawArgs: string,
+    entries: MemoryEntry[],
+    store: ReasonixMemoryStoreHandle,
+  ): string {
+    const match = /^([a-zA-Z]+\/[a-zA-Z0-9_.-]+)\s+([\s\S]+?)\s+::\s+([\s\S]+)$/.exec(rawArgs.trim());
+    if (!match) {
+      return 'Usage: /memory write <global|project>/<name> <description> :: <content>';
+    }
+
+    const [, target, descriptionRaw, contentRaw] = match;
+    const [scopeRaw, name] = target.split('/', 2);
+    const scope = scopeRaw.toLowerCase();
+    if (scope !== 'global' && scope !== 'project') {
+      return 'Usage: /memory write <global|project>/<name> <description> :: <content>';
+    }
+
+    const description = descriptionRaw.trim();
+    const content = contentRaw.trim();
+    if (!description || !content) {
+      return 'Memory description and content are both required.';
+    }
+
+    const exists = entries.some(
+      (entry) => entry.scope === scope && entry.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (exists) {
+      return `Reasonix memory ${scope}/${name} already exists. This command will not overwrite existing memory.`;
+    }
+
+    try {
+      const path = store.write({
+        scope,
+        name,
+        type: scope === 'project' ? 'project' : 'user',
+        description,
+        body: content,
+      });
+      return [
+        `Saved Reasonix memory ${scope}/${name}.`,
+        '',
+        `- path: ${path}`,
+        '- note: it will be pinned into the system prompt on next new session or plugin reload.',
+      ].join('\n');
+    } catch (error) {
+      return `Reasonix memory write failed: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
 
   private buildMemoryForgetText(

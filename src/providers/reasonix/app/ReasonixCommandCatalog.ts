@@ -45,7 +45,7 @@ export const REASONIX_STATIC_COMMANDS: SlashCommand[] = [
     id: 'reasonix:memory',
     name: 'memory',
     description: 'Show Reasonix memory status',
-    argumentHint: '[list|show|forget|status]',
+    argumentHint: '[list|show|write|forget|status]',
     content: '',
     source: 'sdk',
     kind: 'command',
