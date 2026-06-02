@@ -17,6 +17,7 @@ import type {
   ChatMessage as ReasonixChatMessage,
   LoopEvent,
   MemoryEntry,
+  MemoryScope,
   ToolSpec,
 } from 'reasonix';
 
@@ -89,6 +90,8 @@ interface ParsedReasonixSlashCommand {
   command: SlashCommand;
   args: string;
 }
+
+type ReasonixMemoryStoreHandle = Pick<import('reasonix').MemoryStore, 'delete'>;
 
 export class ReasonixChatRuntime implements ChatRuntime {
   readonly providerId = PROVIDER_ID;
@@ -1002,7 +1005,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       const projectIndex = store.loadIndex('project');
 
       if (normalizedArgs) {
-        return this.buildMemoryCommandText(normalizedArgs, entries);
+        return this.buildMemoryCommandText(normalizedArgs, entries, store);
       }
 
       return [
@@ -1024,7 +1027,11 @@ export class ReasonixChatRuntime implements ChatRuntime {
     }
   }
 
-  private buildMemoryCommandText(args: string, entries: MemoryEntry[]): string {
+  private buildMemoryCommandText(
+    args: string,
+    entries: MemoryEntry[],
+    store: ReasonixMemoryStoreHandle,
+  ): string {
     const [subcommandRaw, ...rest] = args.split(/\s+/);
     const subcommand = subcommandRaw?.toLowerCase();
 
@@ -1035,8 +1042,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
         return this.buildMemoryListText(rest[0], entries);
       case 'show':
         return this.buildMemoryShowText(rest.join(' '), entries);
+      case 'forget':
+        return this.buildMemoryForgetText(rest.join(' '), entries, store);
       default:
-        return 'Usage: /memory [status|list [global|project]|show <name|scope/name>]';
+        return 'Usage: /memory [status|list [global|project]|show <name|scope/name>|forget <name|scope/name> confirm]';
     }
   }
 
@@ -1074,34 +1083,21 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   private buildMemoryShowText(target: string, entries: MemoryEntry[]): string {
-    const normalized = target.trim();
-    if (!normalized) {
+    const resolved = this.resolveMemoryTarget(target, entries);
+    if (resolved.kind === 'usage') {
       return 'Usage: /memory show <name|scope/name>';
     }
-
-    const [scopePart, namePart] = normalized.includes('/')
-      ? normalized.split('/', 2)
-      : [undefined, normalized];
-    const scope = scopePart?.toLowerCase();
-    if (scope && scope !== 'global' && scope !== 'project') {
+    if (resolved.kind === 'invalid-scope') {
       return 'Usage: /memory show <name|scope/name>';
     }
-
-    const matches = entries.filter((entry) => {
-      if (scope && entry.scope !== scope) {
-        return false;
-      }
-      return entry.name.toLowerCase() === namePart.toLowerCase();
-    });
-
-    if (matches.length === 0) {
-      return `No Reasonix memory entry found for "${normalized}".`;
+    if (resolved.matches.length === 0) {
+      return `No Reasonix memory entry found for "${resolved.target}".`;
     }
-    if (matches.length > 1) {
-      return `Multiple entries match "${normalized}". Use /memory show global/${namePart} or /memory show project/${namePart}.`;
+    if (resolved.matches.length > 1) {
+      return `Multiple entries match "${resolved.target}". Use /memory show global/${resolved.name} or /memory show project/${resolved.name}.`;
     }
 
-    const entry = matches[0];
+    const entry = resolved.matches[0];
     const body = entry.body.length > 6000
       ? `${entry.body.slice(0, 6000)}\n\n[truncated ${entry.body.length - 6000} chars]`
       : entry.body;
@@ -1117,6 +1113,85 @@ export class ReasonixChatRuntime implements ChatRuntime {
       '',
       body || '(empty)',
     ].filter((line) => line !== '').join('\n');
+  }
+
+  private buildMemoryForgetText(
+    rawArgs: string,
+    entries: MemoryEntry[],
+    store: ReasonixMemoryStoreHandle,
+  ): string {
+    const parts = rawArgs.trim().split(/\s+/).filter(Boolean);
+    const hasConfirm = parts[parts.length - 1]?.toLowerCase() === 'confirm';
+    const target = hasConfirm ? parts.slice(0, -1).join(' ') : parts.join(' ');
+    const resolved = this.resolveMemoryTarget(target, entries);
+
+    if (resolved.kind === 'usage' || resolved.kind === 'invalid-scope') {
+      return 'Usage: /memory forget <name|scope/name> confirm';
+    }
+    if (resolved.matches.length === 0) {
+      return `No Reasonix memory entry found for "${resolved.target}".`;
+    }
+    if (resolved.matches.length > 1) {
+      return `Multiple entries match "${resolved.target}". Use /memory forget global/${resolved.name} confirm or /memory forget project/${resolved.name} confirm.`;
+    }
+
+    const entry = resolved.matches[0];
+    if (!hasConfirm) {
+      return [
+        `This would delete Reasonix memory ${entry.scope}/${entry.name}.`,
+        '',
+        'Run the command again with confirm to delete it:',
+        `/memory forget ${entry.scope}/${entry.name} confirm`,
+      ].join('\n');
+    }
+
+    const deleted = store.delete(entry.scope, entry.name);
+    return deleted
+      ? `Deleted Reasonix memory ${entry.scope}/${entry.name}.`
+      : `Reasonix memory ${entry.scope}/${entry.name} was not found at delete time.`;
+  }
+
+  private resolveMemoryTarget(
+    target: string,
+    entries: MemoryEntry[],
+  ): (
+    | { kind: 'usage' }
+    | { kind: 'invalid-scope' }
+    | {
+        kind: 'resolved';
+        target: string;
+        name: string;
+        scope?: MemoryScope;
+        matches: MemoryEntry[];
+      }
+  ) {
+    const normalized = target.trim();
+    if (!normalized) {
+      return { kind: 'usage' };
+    }
+
+    const [scopePart, namePart] = normalized.includes('/')
+      ? normalized.split('/', 2)
+      : [undefined, normalized];
+    const scope = scopePart?.toLowerCase();
+    if (scope && scope !== 'global' && scope !== 'project') {
+      return { kind: 'invalid-scope' };
+    }
+
+    const matches = entries.filter((entry) => {
+      if (scope && entry.scope !== scope) {
+        return false;
+      }
+      return entry.name.toLowerCase() === namePart.toLowerCase();
+    });
+
+    return {
+      kind: 'resolved',
+      target: normalized,
+      name: namePart,
+      scope: scope as MemoryScope | undefined,
+      matches,
+    };
   }
 
   private normalizeModelId(input: string): string {
