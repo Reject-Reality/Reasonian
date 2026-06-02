@@ -9,6 +9,7 @@ import {
   ToolRegistry,
   bridgeMcpTools,
   registerChoiceTool,
+  registerMemoryTools,
   registerPlanTool,
   registerTodoTool,
 } from 'reasonix';
@@ -181,7 +182,24 @@ export class ReasonixChatRuntime implements ChatRuntime {
     registerPlanTool(registry);
     registerChoiceTool(registry);
     registerTodoTool(registry);
+    this.registerSafeMemoryTools(registry);
     return registry;
+  }
+
+  private registerSafeMemoryTools(registry: ToolRegistry): void {
+    const settings = this.getSettings();
+    if (!settings.memoryEnabled) {
+      return;
+    }
+
+    registerMemoryTools(registry, {
+      projectRoot: settings.projectMemoryRoot.trim() || this.vaultPath(),
+      homeDir: settings.memoryHomeDir.trim() || undefined,
+    });
+
+    // Keep destructive memory deletion behind the explicit slash command
+    // confirmation flow instead of exposing it to autonomous tool calls.
+    registry.unregister('forget');
   }
 
   private parseReasonixSlashCommand(text: string): ParsedReasonixSlashCommand | null {
