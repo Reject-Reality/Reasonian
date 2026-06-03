@@ -26,6 +26,26 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
     const settings = getReasonixProviderSettings(
       context.plugin.settings as unknown as Record<string, unknown>,
     );
+    const reloadReasonixSettings = async (): Promise<void> => {
+      for (const view of context.plugin.getAllViews()) {
+        const tabManager = view.getTabManager();
+        if (!tabManager) {
+          continue;
+        }
+
+        await tabManager.broadcastToAllTabs(async (service) => {
+          if (service.providerId !== 'reasonix') {
+            return;
+          }
+
+          const reload = (service as { reloadProviderSettings?: () => Promise<void> })
+            .reloadProviderSettings;
+          if (reload) {
+            await reload.call(service);
+          }
+        });
+      }
+    };
 
     const memorySection = container.createDiv({ cls: 'claudian-provider-settings-section' });
     new Setting(memorySection)
@@ -43,6 +63,7 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
             { memoryEnabled: value },
           );
           await context.plugin.saveSettings();
+          await reloadReasonixSettings();
         }));
 
     new Setting(memorySection)
@@ -57,6 +78,7 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
             { projectMemoryRoot: value.trim() },
           );
           await context.plugin.saveSettings();
+          await reloadReasonixSettings();
         }));
 
     new Setting(memorySection)
@@ -71,6 +93,26 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
             { memoryHomeDir: value.trim() },
           );
           await context.plugin.saveSettings();
+          await reloadReasonixSettings();
+        }));
+
+    const webSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    new Setting(webSection)
+      .setName('Reasonix Web')
+      .setDesc('Allow Reasonix to use web_search and web_fetch tools. Queries and fetched URLs may be sent to external services.');
+
+    new Setting(webSection)
+      .setName('Enable web tools')
+      .setDesc('Registers read-only web_search and web_fetch tools for Reasonix sessions.')
+      .addToggle((toggle) => toggle
+        .setValue(settings.webToolsEnabled)
+        .onChange(async (value) => {
+          updateReasonixProviderSettings(
+            context.plugin.settings as unknown as Record<string, unknown>,
+            { webToolsEnabled: value },
+          );
+          await context.plugin.saveSettings();
+          await reloadReasonixSettings();
         }));
 
     const mcpSection = container.createDiv({ cls: 'claudian-provider-settings-section' });

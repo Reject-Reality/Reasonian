@@ -15,6 +15,7 @@ import {
   registerPlanTool,
   registerShellTools,
   registerTodoTool,
+  registerWebTools,
   setGrammarDir,
 } from 'reasonix';
 import * as path from 'path';
@@ -191,6 +192,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     this.registerVaultCodeQueryTools(registry);
     this.registerShellCommandTools(registry);
     this.registerSafeMemoryTools(registry);
+    this.registerOptionalWebTools(registry);
     return registry;
   }
 
@@ -248,6 +250,15 @@ export class ReasonixChatRuntime implements ChatRuntime {
     // Keep destructive memory deletion behind the explicit slash command
     // confirmation flow instead of exposing it to autonomous tool calls.
     registry.unregister('forget');
+  }
+
+  private registerOptionalWebTools(registry: ToolRegistry): void {
+    const settings = this.getSettings();
+    if (!settings.webToolsEnabled) {
+      return;
+    }
+
+    registerWebTools(registry);
   }
 
   private parseReasonixSlashCommand(text: string): ParsedReasonixSlashCommand | null {
@@ -1053,6 +1064,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       `- ready: ${this.isReady() ? 'yes' : 'no API key configured'}`,
       `- MCP servers: ${activeMcp}`,
       `- memory: ${settings.memoryEnabled ? 'enabled' : 'disabled'}`,
+      `- web tools: ${settings.webToolsEnabled ? 'enabled' : 'disabled'}`,
     ].join('\n');
   }
 
@@ -1620,6 +1632,23 @@ export class ReasonixChatRuntime implements ChatRuntime {
   async reloadMcpServers(): Promise<void> {
     await this.getMcpServerManager()?.loadServers();
     await this.clearMcpBridge();
+  }
+
+  async reloadProviderSettings(): Promise<void> {
+    const previousMessages = this.loop?.log.toFullHistory() ?? [];
+    await this.clearMcpBridge();
+    this.prefix = null;
+    this.tools = null;
+
+    if (this.loop) {
+      this.loop = null;
+      this.loopHydrated = false;
+      const loop = this.ensureLoop();
+      if (previousMessages.length > 0) {
+        loop.log.initWindow(previousMessages);
+        this.loopHydrated = true;
+      }
+    }
   }
 
   async ensureReady(options?: ChatRuntimeEnsureReadyOptions): Promise<boolean> {

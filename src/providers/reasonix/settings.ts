@@ -16,6 +16,7 @@ export interface ReasonixProviderSettings {
   memoryEnabled: boolean;
   projectMemoryRoot: string;
   memoryHomeDir: string;
+  webToolsEnabled: boolean;
 }
 
 export const DEFAULT_REASONIX_PROVIDER_SETTINGS: Readonly<ReasonixProviderSettings> = Object.freeze({
@@ -32,6 +33,7 @@ export const DEFAULT_REASONIX_PROVIDER_SETTINGS: Readonly<ReasonixProviderSettin
   memoryEnabled: true,
   projectMemoryRoot: '',
   memoryHomeDir: '',
+  webToolsEnabled: false,
 });
 
 export function getReasonixProviderSettings(
@@ -62,6 +64,8 @@ export function getReasonixProviderSettings(
       ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.projectMemoryRoot,
     memoryHomeDir: (config.memoryHomeDir as string)
       ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.memoryHomeDir,
+    webToolsEnabled: (config.webToolsEnabled as boolean)
+      ?? DEFAULT_REASONIX_PROVIDER_SETTINGS.webToolsEnabled,
   };
 }
 
