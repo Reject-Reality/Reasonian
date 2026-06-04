@@ -94,4 +94,78 @@ describe('ReasonixConversationHistoryService', () => {
       anotherFlag: true,
     });
   });
+
+  it('creates parent folders and writes messages when saving a session', async () => {
+    const service = new ReasonixConversationHistoryService();
+    const mkdirCalls: string[] = [];
+    const writeCalls: Array<{ path: string; data: string }> = [];
+    const existingPaths = new Set<string>();
+
+    service.setVaultAdapter(createAdapter({
+      exists: async (path) => existingPaths.has(path),
+      mkdir: async (path) => {
+        mkdirCalls.push(path);
+        existingPaths.add(path);
+      },
+      write: async (path, data) => {
+        writeCalls.push({ path, data });
+      },
+    }));
+
+    const conversation = createConversation();
+    conversation.messages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: 'save me',
+        timestamp: 1,
+      },
+    ];
+
+    await service.saveMessages(conversation);
+
+    expect(mkdirCalls).toEqual(['.reasonix', '.reasonix/sessions']);
+    expect(writeCalls).toHaveLength(1);
+    expect(writeCalls[0]?.path).toBe('.reasonix/sessions/session-1.messages.json');
+    expect(JSON.parse(writeCalls[0]?.data ?? '[]')).toEqual(conversation.messages);
+  });
+
+  it('does not write files when there are no messages to persist', async () => {
+    const service = new ReasonixConversationHistoryService();
+    const write = jest.fn<Promise<void>, [string, string]>(async () => undefined);
+
+    service.setVaultAdapter(createAdapter({
+      write,
+    }));
+
+    await service.saveMessages(createConversation());
+
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('deletes persisted session files and clears in-memory messages', async () => {
+    const service = new ReasonixConversationHistoryService();
+    const deletedPaths: string[] = [];
+    const conversation = createConversation();
+    conversation.messages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: 'to be deleted',
+        timestamp: 1,
+      },
+    ];
+
+    service.setVaultAdapter(createAdapter({
+      exists: async (path) => path === '.reasonix/sessions/session-1.messages.json',
+      delete: async (path) => {
+        deletedPaths.push(path);
+      },
+    }));
+
+    await service.deleteConversationSession(conversation, null);
+
+    expect(deletedPaths).toEqual(['.reasonix/sessions/session-1.messages.json']);
+    expect(conversation.messages).toEqual([]);
+  });
 });
