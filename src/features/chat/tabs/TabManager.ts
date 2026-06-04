@@ -7,6 +7,7 @@ import type { SlashCommand } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import type ClaudianPlugin from '../../../main';
 import { chooseForkTarget } from '../../../shared/modals/ForkTargetModal';
+import { buildForkTitle } from './forkUtils';
 import { getTabProviderId } from './providerResolution';
 import {
   activateTab,
@@ -496,7 +497,11 @@ export class TabManager implements TabManagerInterface {
     });
 
     const title = context.sourceTitle
-      ? this.buildForkTitle(context.sourceTitle, context.forkAtUserMessage)
+      ? buildForkTitle(
+        context.sourceTitle,
+        this.plugin.getConversationList().map((conversation) => conversation.title),
+        context.forkAtUserMessage,
+      )
       : undefined;
 
     const forkProviderState = ProviderRegistry
@@ -516,27 +521,6 @@ export class TabManager implements TabManagerInterface {
 
     return conversation.id;
   }
-
-  private buildForkTitle(sourceTitle: string, forkAtUserMessage?: number): string {
-    const MAX_TITLE_LENGTH = 50;
-    const forkSuffix = forkAtUserMessage ? ` (#${forkAtUserMessage})` : '';
-    const forkPrefix = 'Fork: ';
-    const maxSourceLength = MAX_TITLE_LENGTH - forkPrefix.length - forkSuffix.length;
-    const truncatedSource = sourceTitle.length > maxSourceLength
-      ? sourceTitle.slice(0, maxSourceLength - 1) + '…'
-      : sourceTitle;
-    let title = forkPrefix + truncatedSource + forkSuffix;
-
-    const existingTitles = new Set(this.plugin.getConversationList().map(c => c.title));
-    if (existingTitles.has(title)) {
-      let n = 2;
-      while (existingTitles.has(`${title} ${n}`)) n++;
-      title = `${title} ${n}`;
-    }
-
-    return title;
-  }
-
   // ============================================
   // Persistence
   // ============================================

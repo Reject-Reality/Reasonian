@@ -46,6 +46,7 @@ import { InstructionModeManager as InstructionModeManagerClass } from '../ui/Ins
 import { NavigationSidebar } from '../ui/NavigationSidebar';
 import { StatusPanel } from '../ui/StatusPanel';
 import { recalculateUsageForModel } from '../utils/usageInfo';
+import { countUserMessagesForForkTitle } from './forkUtils';
 import { getTabProviderId } from './providerResolution';
 import type { TabData, TabDOMElements, TabId, TabProviderContext } from './types';
 import { generateTabId, TEXTAREA_MAX_HEIGHT_PERCENT, TEXTAREA_MIN_MAX_HEIGHT } from './types';
@@ -953,11 +954,6 @@ function deepCloneMessages(messages: ChatMessage[]): ChatMessage[] {
     return sc(messages);
   }
   return JSON.parse(JSON.stringify(messages)) as ChatMessage[];
-}
-
-function countUserMessagesForForkTitle(messages: ChatMessage[]): number {
-  // Keep fork numbering stable by excluding non-semantic user messages.
-  return messages.filter(m => m.role === 'user' && !m.isInterrupt && !m.isRebuiltContext).length;
 }
 
 interface ForkSource {
