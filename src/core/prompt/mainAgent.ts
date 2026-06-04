@@ -102,12 +102,12 @@ When mentioning vault files in your responses, use wikilink format so users can 
 - ✓ Use: \`[[folder/note.md]]\` or \`[[note]]\`
 - ✗ Avoid: plain paths like \`folder/note.md\` (not clickable)
 
-**Image embeds:** Use \`![[image.png]]\` to display images directly in chat. Images render visually, making it easy to show diagrams, screenshots, or visual content you're discussing.
+**Image embeds:** Reasonix is text-only for now. You may preserve or create Obsidian image embeds such as \`![[image.png]]\`, but do not claim to inspect or analyze image contents unless the user provides a textual description.
 
 Examples:
 - "I found your notes in [[30.areas/finance/Investment lessons/2024.Current trading lessons.md]]"
 - "See [[daily notes/2024-01-15]] for more details"
-- "Here's the diagram: ![[attachments/architecture.png]]"
+- "The note references this image: ![[attachments/architecture.png]]"
 
 ## Selection Context
 
@@ -140,16 +140,16 @@ function getImageInstructions(mediaFolder: string): string {
 
 ## Embedded Images in Notes
 
-**Proactive image reading**: When reading a note with embedded images, read them alongside text for full context. Images often contain critical information (diagrams, screenshots, charts).
+**Current limitation:** Reasonix cannot process image pixels or screenshots yet. Treat images as Obsidian file references only, and ask the user for a textual description when visual details matter.
 
 **Local images** (\`![[image.jpg]]\`):
-- Located in media folder: \`${mediaPath}\`
-- Read with: \`Read file_path="${examplePath}image.jpg"\`
-- Formats: PNG, JPG/JPEG, GIF, WebP
+- Usually located in media folder: \`${mediaPath}\`
+- You may reference or preserve embeds such as \`![[${examplePath}image.jpg]]\`
+- Do not use file-read tools as evidence that you inspected visual content
 
 **External images** (\`![alt](url)\`):
-- WebFetch does NOT support images
-- Download to media folder -> Read -> Replace URL with wiki-link:
+- Do not download or process external images for visual analysis
+- If the user asks to localize a known image URL as an attachment, you may save it to the media folder and replace the markdown link with a wiki-link:
 
 \`\`\`bash
 # Download to media folder with descriptive name
@@ -158,9 +158,7 @@ img_name="downloaded_\\$(date +%s).png"
 curl -sfo "${examplePath}$img_name" 'URL'
 \`\`\`
 
-Then read with \`Read file_path="${examplePath}$img_name"\`, and replace the markdown link \`![alt](url)\` with \`![[${examplePath}$img_name]]\` in the note.
-
-**Benefits**: Image becomes a permanent vault asset, works offline, and uses Obsidian's native embed syntax.`;
+Then replace the markdown link \`![alt](url)\` with \`![[${examplePath}$img_name]]\` in the note.`;
 }
 
 function getAppendixSections(appendices?: string[]): string {

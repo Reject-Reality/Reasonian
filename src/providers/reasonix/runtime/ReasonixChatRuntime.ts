@@ -34,7 +34,10 @@ import {
   updateReasonixProviderSettings,
 } from '../settings';
 import type { ReasonixProviderSettings } from '../settings';
-import { REASONIX_STATIC_COMMANDS } from '../app/ReasonixCommandCatalog';
+import {
+  REASONIX_STATIC_COMMANDS,
+  ReasonixCommandCatalog,
+} from '../app/ReasonixCommandCatalog';
 import { ProviderWorkspaceRegistry } from '../../../core/providers/ProviderWorkspaceRegistry';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { ProviderCapabilities } from '../../../core/providers/types';
@@ -66,8 +69,26 @@ import type {
   UsageInfo,
 } from '../../../core/types';
 import type ClaudianPlugin from '../../../main';
-import { getVaultPath } from '../../../utils/path';
+import {
+  getVaultPath,
+  isPathWithinDirectory,
+  normalizePathForComparison,
+} from '../../../utils/path';
 import { buildSystemPrompt } from '../../../core/prompt/mainAgent';
+import { appendBrowserContext } from '../../../utils/browser';
+import { appendCanvasContext } from '../../../utils/canvas';
+import {
+  appendContextFiles,
+  appendCurrentNote,
+} from '../../../utils/context';
+import { appendEditorContext } from '../../../utils/editor';
+import {
+  countReasonixUserTurns,
+  isReasonixLocalSdkCommandUserMessage,
+  makeReasonixAssistantTurnId,
+  makeReasonixUserTurnId,
+  parseReasonixUserTurnIndex,
+} from '../turnIds';
 
 const PROVIDER_ID = 'reasonix';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
@@ -114,10 +135,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
   private pendingHydrationMessages: ChatMessage[] | null = null;
   private loopHydrated = false;
   private sessionInvalidated = false;
+  private conversationKey: string | null = null;
   private cancelled = false;
   private turnMetadata: ChatTurnMetadata = {};
   private readyListeners = new Set<(ready: boolean) => void>();
   private activeMcpBridge: ActiveMcpBridge | null = null;
+  private externalContextRoots: string[] = [];
 
   private approvalCallback: ApprovalCallback | null = null;
   private askUserQuestionCallback: AskUserQuestionCallback | null = null;
@@ -262,15 +285,16 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   private parseReasonixSlashCommand(text: string): ParsedReasonixSlashCommand | null {
-    const match = /^\/([a-zA-Z0-9_-]+)(?:\s+([\s\S]*))?$/.exec(text.trim());
+    const match = /^\/([a-zA-Z0-9][a-zA-Z0-9._-]*)(?:\s+([\s\S]*))?$/.exec(text.trim());
     if (!match) {
       return null;
     }
 
-    const name = match[1].toLowerCase();
-    const command = REASONIX_STATIC_COMMANDS.find(
-      (entry) => entry.name.toLowerCase() === name,
-    );
+    const name = match[1];
+    const command = this.getCommandCatalog()?.getCommandByName(name)
+      ?? REASONIX_STATIC_COMMANDS.find(
+        (entry) => entry.name.toLowerCase() === name.toLowerCase(),
+      );
     if (!command) {
       return null;
     }
@@ -283,14 +307,29 @@ export class ReasonixChatRuntime implements ChatRuntime {
 
   private applySlashCommandTemplate(command: SlashCommand, args: string): string {
     const content = command.content || args;
-    if (content.includes('$ARGUMENTS')) {
-      return content.replace(/\$ARGUMENTS/g, args || '(no explicit argument provided)');
+    const expanded = content.includes('$ARGUMENTS')
+      ? content.replace(/\$ARGUMENTS/g, args || '(no explicit argument provided)')
+      : (args ? `${content}\n\n${args}` : content);
+
+    if (command.kind === 'skill') {
+      return [
+        `# Skill: ${command.name}`,
+        command.description ? `> ${command.description}` : '',
+        '',
+        expanded,
+      ].filter((line) => line !== '').join('\n');
     }
-    return args ? `${content}\n\n${args}` : content;
+
+    return expanded;
   }
 
   private getMcpServerManager() {
     return ProviderWorkspaceRegistry.getMcpServerManager(this.providerId);
+  }
+
+  private getCommandCatalog(): ReasonixCommandCatalog | null {
+    const catalog = ProviderWorkspaceRegistry.getCommandCatalog(this.providerId);
+    return catalog instanceof ReasonixCommandCatalog ? catalog : null;
   }
 
   private toolSpecFor(name: string): ToolSpec | null {
@@ -606,13 +645,25 @@ export class ReasonixChatRuntime implements ChatRuntime {
 
   private mapConversationToLoopMessages(messages: ChatMessage[]): ReasonixChatMessage[] {
     const mapped: ReasonixChatMessage[] = [];
+    let skipAssistantAfterLocalCommand = false;
 
     for (const message of messages) {
       if (message.role === 'user') {
+        if (isReasonixLocalSdkCommandUserMessage(message)) {
+          skipAssistantAfterLocalCommand = true;
+          continue;
+        }
+
+        skipAssistantAfterLocalCommand = false;
         mapped.push({
           role: 'user',
           content: message.content,
         });
+        continue;
+      }
+
+      if (skipAssistantAfterLocalCommand) {
+        skipAssistantAfterLocalCommand = false;
         continue;
       }
 
@@ -1016,6 +1067,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
     | { type: 'always_allow'; prefix: string }
     | { type: 'deny'; denyContext?: string }
   > {
+    if (payload.intent === 'read' && this.isPathInExternalContext(payload.path)) {
+      return { type: 'run_once' };
+    }
+
     if (!this.approvalCallback) {
       return { type: 'deny', denyContext: 'No approval UI is available.' };
     }
@@ -1035,6 +1090,32 @@ export class ReasonixChatRuntime implements ChatRuntime {
     return { type: 'deny' };
   }
 
+  private setExternalContextRoots(paths?: string[]): void {
+    const roots = new Map<string, string>();
+    for (const rawPath of paths ?? []) {
+      const trimmed = rawPath.trim();
+      if (!trimmed) {
+        continue;
+      }
+      const normalized = normalizePathForComparison(trimmed);
+      if (!normalized || roots.has(normalized)) {
+        continue;
+      }
+      roots.set(normalized, trimmed);
+    }
+    this.externalContextRoots = [...roots.values()];
+  }
+
+  private isPathInExternalContext(candidatePath: string): boolean {
+    if (this.externalContextRoots.length === 0) {
+      return false;
+    }
+
+    return this.externalContextRoots.some((root) =>
+      isPathWithinDirectory(candidatePath, root, root)
+    );
+  }
+
   private looksLikeCompactionWarning(event: LoopEvent): boolean {
     if (event.role !== 'warning') {
       return false;
@@ -1043,10 +1124,25 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   private buildHelpText(): string {
-    const commands = REASONIX_STATIC_COMMANDS
-      .map((command) => `/${command.name}${command.argumentHint ? ` ${command.argumentHint}` : ''} - ${command.description ?? 'Reasonix command'}`)
-      .join('\n');
-    return `Supported Reasonix commands in Obsidian:\n\n${commands}`;
+    const runtimeCommands = REASONIX_STATIC_COMMANDS.map((command) =>
+      `/${command.name}${command.argumentHint ? ` ${command.argumentHint}` : ''} - ${command.description ?? 'Reasonix command'}`
+    );
+    const vaultCommands = this.getCommandCatalog()
+      ?.getCachedVaultEntries()
+      .map((entry) => `/${entry.name}${entry.argumentHint ? ` ${entry.argumentHint}` : ''} - ${entry.description ?? `Reasonix ${entry.kind}`}`)
+      ?? [];
+
+    const sections = [
+      'Supported Reasonix commands in Obsidian:',
+      '',
+      ...runtimeCommands,
+    ];
+
+    if (vaultCommands.length > 0) {
+      sections.push('', 'Vault commands and skills:', '', ...vaultCommands);
+    }
+
+    return sections.join('\n');
   }
 
   private buildStatusText(): string {
@@ -1054,16 +1150,28 @@ export class ReasonixChatRuntime implements ChatRuntime {
     const activeMcp = this.activeMcpBridge?.key
       ? this.activeMcpBridge.key.split('\u001f').filter(Boolean).join(', ')
       : 'none';
+    const baseUrl = settings.baseUrl.trim() || 'https://api.deepseek.com';
+    const memoryRoot = settings.projectMemoryRoot.trim() || this.vaultPath();
+    const memoryHome = settings.memoryHomeDir.trim() || '~/.reasonix';
+    const maxTokens = settings.maxOutputTokens > 0 ? String(settings.maxOutputTokens) : 'auto';
+    const budget = settings.budgetUsd && settings.budgetUsd > 0 ? `$${settings.budgetUsd}` : 'off';
 
     return [
       'Reasonix runtime status:',
       '',
+      `- provider: ${PROVIDER_ID}`,
       `- model: ${settings.model || DEFAULT_MODEL}`,
       `- reasoning effort: ${settings.reasoningEffort}`,
+      `- base URL: ${baseUrl}`,
       `- session: ${this.sessionId ?? 'not started'}`,
       `- ready: ${this.isReady() ? 'yes' : 'no API key configured'}`,
+      `- max output tokens: ${maxTokens}`,
+      `- budget cap: ${budget}`,
+      `- max iterations per turn: ${settings.maxIterPerTurn}`,
       `- MCP servers: ${activeMcp}`,
       `- memory: ${settings.memoryEnabled ? 'enabled' : 'disabled'}`,
+      `- project memory root: ${memoryRoot}`,
+      `- Reasonix home: ${memoryHome}`,
       `- web tools: ${settings.webToolsEnabled ? 'enabled' : 'disabled'}`,
     ].join('\n');
   }
@@ -1547,7 +1655,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     conversationHistory: ChatMessage[] | undefined,
     queryOptions: ChatRuntimeQueryOptions | undefined,
   ): Promise<{ content: string; compacted?: boolean } | null> {
-    if (parsed.command.disableModelInvocation !== true) {
+    if (parsed.command.source !== 'sdk' || parsed.command.disableModelInvocation !== true) {
       return null;
     }
 
@@ -1581,19 +1689,57 @@ export class ReasonixChatRuntime implements ChatRuntime {
     return REASONIX_PROVIDER_CAPABILITIES;
   }
 
+  private appendObsidianContext(
+    content: string,
+    request: ChatTurnRequest,
+    isCompact: boolean,
+  ): string {
+    if (isCompact) {
+      return content;
+    }
+
+    let next = content;
+    if (request.currentNotePath) {
+      next = appendCurrentNote(next, request.currentNotePath);
+    }
+    if (request.editorSelection) {
+      next = appendEditorContext(next, request.editorSelection);
+    }
+    if (request.browserSelection) {
+      next = appendBrowserContext(next, request.browserSelection);
+    }
+    if (request.canvasSelection) {
+      next = appendCanvasContext(next, request.canvasSelection);
+    }
+    if (request.externalContextPaths && request.externalContextPaths.length > 0) {
+      next = appendContextFiles(next, request.externalContextPaths);
+    }
+
+    return next;
+  }
+
   prepareTurn(request: ChatTurnRequest): PreparedChatTurn {
     const manager = this.getMcpServerManager();
     const mcpMentions = manager?.extractMentions(request.text) ?? new Set<string>();
+    this.setExternalContextRoots(request.externalContextPaths);
     const parsedCommand = this.parseReasonixSlashCommand(request.text);
-    const persistedContent = parsedCommand && parsedCommand.command.disableModelInvocation !== true
+    const isCompact = parsedCommand?.command.name === 'compact';
+    const isLocalSdkCommand = parsedCommand?.command.source === 'sdk'
+      && parsedCommand.command.disableModelInvocation === true;
+    const baseContent = parsedCommand && !isLocalSdkCommand
       ? this.applySlashCommandTemplate(parsedCommand.command, parsedCommand.args)
       : request.text;
+    const persistedContent = this.appendObsidianContext(
+      baseContent,
+      request,
+      isCompact,
+    );
 
     return {
       request,
       persistedContent,
       prompt: this.currentSystemPrompt || this.buildSystemPromptText(),
-      isCompact: parsedCommand?.command.name === 'compact',
+      isCompact,
       mcpMentions,
     };
   }
@@ -1608,15 +1754,40 @@ export class ReasonixChatRuntime implements ChatRuntime {
 
   setResumeCheckpoint(_checkpointId: string | undefined): void {}
 
+  private getProviderStateString(
+    conversation: ChatRuntimeConversationState | null,
+    key: string,
+  ): string | null {
+    const value = conversation?.providerState?.[key];
+    return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private getConversationKey(conversation: ChatRuntimeConversationState | null): string | null {
+    if (!conversation) {
+      return null;
+    }
+
+    return [
+      conversation.sessionId ?? '',
+      this.getProviderStateString(conversation, 'conversationId') ?? '',
+      this.getProviderStateString(conversation, 'sourceSessionId') ?? '',
+      this.getProviderStateString(conversation, 'resumeAt') ?? '',
+    ].join('\u001f');
+  }
+
   syncConversationState(
     conversation: ChatRuntimeConversationState | null,
-    _externalContextPaths?: string[],
+    externalContextPaths?: string[],
   ): void {
     const nextSessionId = conversation?.sessionId ?? null;
-    const sessionChanged = nextSessionId !== this.sessionId;
+    const nextConversationKey = this.getConversationKey(conversation);
+    const sessionChanged = nextSessionId !== this.sessionId
+      || nextConversationKey !== this.conversationKey;
 
     this.currentConversationState = conversation;
     this.sessionId = nextSessionId;
+    this.conversationKey = nextConversationKey;
+    this.setExternalContextRoots(externalContextPaths);
 
     if (sessionChanged) {
       this.loop = null;
@@ -1625,6 +1796,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       this.pendingHydrationMessages = null;
       this.loopHydrated = false;
       this.sessionInvalidated = false;
+      this.turnMetadata = {};
       void this.clearMcpBridge();
     }
   }
@@ -1667,6 +1839,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
   ): AsyncGenerator<StreamChunk> {
     this.cancelled = false;
     this.turnMetadata = {};
+    let currentTurnIndex: number | null = null;
 
     if (queryOptions?.forceColdStart === true) {
       await this.clearMcpBridge();
@@ -1678,7 +1851,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
     }
 
     const parsedCommand = this.parseReasonixSlashCommand(turn.request.text);
-    if (parsedCommand?.command.disableModelInvocation === true) {
+    if (
+      parsedCommand?.command.source === 'sdk'
+      && parsedCommand.command.disableModelInvocation === true
+    ) {
       const localResult = await this.runLocalSlashCommand(
         parsedCommand,
         conversationHistory,
@@ -1694,6 +1870,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
         return;
       }
     }
+
+    currentTurnIndex = countReasonixUserTurns(conversationHistory);
+    this.turnMetadata = {
+      userMessageId: makeReasonixUserTurnId(currentTurnIndex),
+      wasSent: true,
+    };
 
     this.ensureTooling();
     const enabledMcpServers = this.mergeMcpServerNames(
@@ -1768,6 +1950,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
             break;
 
           case 'assistant_final':
+            if (
+              currentTurnIndex !== null
+              && !this.turnMetadata.assistantMessageId
+            ) {
+              this.turnMetadata.assistantMessageId = makeReasonixAssistantTurnId(currentTurnIndex);
+            }
             if (event.content.startsWith(streamedAssistantText)) {
               const tail = event.content.slice(streamedAssistantText.length);
               if (tail) {
@@ -1896,6 +2084,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     this.prefix = null;
     this.tools = null;
     this.sessionId = null;
+    this.conversationKey = null;
     this.pendingHydrationMessages = null;
     this.loopHydrated = false;
     this.sessionInvalidated = false;
@@ -1934,10 +2123,33 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   async rewind(
-    _userMessageId: string,
+    userMessageId: string,
     _assistantMessageId: string,
   ): Promise<ChatRewindResult> {
-    return { canRewind: false };
+    const turnIndex = parseReasonixUserTurnIndex(userMessageId);
+    if (turnIndex === null) {
+      return {
+        canRewind: false,
+        error: 'Unsupported Reasonix rewind checkpoint.',
+      };
+    }
+
+    if (this.loop && this.loopHydrated) {
+      const restoredText = this.loop.rewindToUserTurn(turnIndex);
+      if (restoredText === null) {
+        return {
+          canRewind: false,
+          error: 'Reasonix conversation history is not loaded far enough to rewind here.',
+        };
+      }
+    } else {
+      this.loop = null;
+      this.loopHydrated = false;
+      this.pendingHydrationMessages = null;
+    }
+
+    this.turnMetadata = {};
+    return { canRewind: true };
   }
 
   setApprovalCallback(callback: ApprovalCallback | null): void {
@@ -1985,8 +2197,11 @@ export class ReasonixChatRuntime implements ChatRuntime {
   }
 
   resolveSessionIdForFork(
-    _conversation: Conversation | null,
+    conversation: Conversation | null,
   ): string | null {
-    return null;
+    return this.sessionId
+      ?? conversation?.sessionId
+      ?? conversation?.id
+      ?? null;
   }
 }

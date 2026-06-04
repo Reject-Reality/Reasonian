@@ -65,11 +65,11 @@
     }
   },
   "settings": {
-    "title": "Claudian Settings",
+    "title": "Reasonian Settings",
     "tabs": {
       "general": "General",
-      "claude": "Claude",
-      "codex": "Codex"
+      "claude": "Reasonix",
+      "codex": "Reasonix"
     },
     "display": "Display",
     "conversations": "Conversations",
@@ -79,7 +79,7 @@
     "models": "Models",
     "experimental": "Experimental",
     "userName": {
-      "name": "What should Claudian call you?",
+      "name": "What should Reasonian call you?",
       "desc": "Your name for personalized greetings (leave empty for generic greetings)"
     },
     "excludedTags": {
@@ -88,7 +88,7 @@
     },
     "mediaFolder": {
       "name": "Media folder",
-      "desc": "Folder containing attachments/images. When notes use ![[image.jpg]], Claude will look here. Leave empty for vault root."
+      "desc": "Folder containing attachments/images. When notes use ![[image.jpg]], Reasonian will look here. Leave empty for vault root."
     },
     "systemPrompt": {
       "name": "Custom system prompt",
@@ -101,7 +101,7 @@
     "titleModel": {
       "name": "Title generation model",
       "desc": "Model used for auto-generating conversation titles.",
-      "auto": "Auto (Haiku)"
+      "auto": "Auto"
     },
     "navMappings": {
       "name": "Vim-style navigation mappings",
@@ -145,25 +145,25 @@
     },
     "slashCommands": {
       "name": "Commands and Skills",
-      "desc": "Manage vault-level commands and skills stored in .claude/commands/ and .claude/skills/. Triggered by /name."
+      "desc": "Manage vault-level commands and skills stored in .reasonix/commands/ and .reasonix/skills/. Triggered by /name."
     },
     "hiddenSlashCommands": {
       "name": "Hidden Commands",
-      "desc": "Hide specific slash commands from the dropdown. Useful for hiding Claude Code commands that are not relevant to Claudian. Enter command names without the leading slash, one per line.",
+      "desc": "Hide specific slash commands from the dropdown. Useful for trimming commands that are not relevant to your Reasonian workflow. Enter command names without the leading slash, one per line.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
       "name": "MCP Servers",
-      "desc": "Manage vault-level MCP server configurations stored in .claude/mcp.json. Servers with context-saving mode require @mention to activate."
+      "desc": "Manage vault-level MCP server configurations stored in .reasonix/mcp.json. Servers with context-saving mode require @mention to activate."
     },
     "plugins": {
-      "name": "Claude Code Plugins",
-      "desc": "Manage Claude Code plugins discovered from ~/.claude/plugins. Enabled plugins are stored per vault in .claude/settings.json."
+      "name": "Legacy Plugins",
+      "desc": "Legacy plugin discovery is not used by the Reasonian MVP runtime."
     },
     "subagents": {
       "name": "Subagents",
-      "desc": "Manage vault-level subagents stored in .claude/agents/. Each Markdown file defines one custom agent.",
-      "noAgents": "No subagents configured. Click + to create one.",
+      "desc": "Reserved for future native Reasonix subagent integration.",
+      "noAgents": "No subagents configured yet.",
       "deleteConfirm": "Delete subagent \"{name}\"?",
       "saveFailed": "Failed to save subagent: {message}",
       "refreshFailed": "Failed to refresh subagents: {message}",
@@ -200,8 +200,8 @@
     },
     "safety": "Safety",
     "loadUserSettings": {
-      "name": "Load user Claude settings",
-      "desc": "Load ~/.claude/settings.json. When enabled, user's Claude Code permission rules may bypass Safe mode."
+      "name": "Load legacy user settings",
+      "desc": "Legacy user settings are not used by the Reasonian MVP runtime."
     },
     "claudeSafeMode": {
       "name": "Safe mode",
@@ -214,7 +214,7 @@
     "environment": "Environment",
     "customVariables": {
       "name": "Custom variables",
-      "desc": "Environment variables for Claude SDK (KEY=VALUE format, one per line). Shell export prefix supported."
+      "desc": "Environment variables for Reasonian and Reasonix runtime integration (KEY=VALUE format, one per line). Shell export prefix supported."
     },
     "envSnippets": {
       "name": "Snippets",
@@ -250,12 +250,12 @@
     },
     "customModels": {
       "name": "Custom models",
-      "desc": "Append additional Claude model IDs to the picker, one per line. Environment model overrides still replace the picker.",
-      "placeholder": "claude-opus-4-6\nclaude-opus-4-6[1m]\nclaude-opus-4-5-20251101"
+      "desc": "Append additional model IDs to the picker, one per line. Environment model overrides still replace the picker.",
+      "placeholder": "deepseek-v4-flash\ndeepseek-v4-pro\ndeepseek-v4-pro-experimental"
     },
     "enableChrome": {
       "name": "Enable Chrome extension",
-      "desc": "Allow Claude to interact with Chrome via the claude-in-chrome extension. Requires the extension to be installed. Requires session restart."
+      "desc": "Reserved for browser-assisted workflows. Requires a compatible browser bridge and session restart."
     },
     "enableBangBash": {
       "name": "Enable bash mode (!)",
@@ -266,7 +266,7 @@
     },
     "maxTabs": {
       "name": "Maximum chat tabs",
-      "desc": "Maximum number of concurrent chat tabs (3-10). Each tab uses a separate Claude session.",
+      "desc": "Maximum number of concurrent chat tabs (3-10). Each tab uses a separate Reasonix session.",
       "warning": "More than 5 tabs may impact performance and memory usage."
     },
     "tabBarPosition": {
@@ -277,16 +277,16 @@
     },
     "enableAutoScroll": {
       "name": "Auto-scroll during streaming",
-      "desc": "Automatically scroll to the bottom as Claude streams responses. Disable to stay at the top and read from the beginning."
+      "desc": "Automatically scroll to the bottom as Reasonix streams responses. Disable to stay at the top and read from the beginning."
     },
     "openInMainTab": {
       "name": "Open in main editor area",
       "desc": "Open chat panel as a main tab in the center editor area instead of the right sidebar"
     },
     "cliPath": {
-      "name": "Claude CLI path",
-      "desc": "Custom path to Claude Code CLI. Leave empty for auto-detection.",
-      "descWindows": "For the native installer, use claude.exe. For npm/pnpm/yarn or other package manager installs, use the cli.js path (not claude.cmd).",
+      "name": "Legacy CLI path",
+      "desc": "Legacy CLI integration is not used by the Reasonian MVP runtime.",
+      "descWindows": "Unused for Reasonian MVP.",
       "descUnix": "Paste the output of \"which claude\" — works for both native and npm/pnpm/yarn installs.",
       "validation": {
         "notExist": "Path does not exist",

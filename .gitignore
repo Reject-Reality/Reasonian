@@ -1,6 +1,7 @@
 # Build output
 main.js
 styles.css
+grammars/
 *.js.map
 dist/
 build/

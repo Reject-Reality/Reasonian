@@ -1,5 +1,6 @@
 import type { ProviderConversationHistoryService } from '../../../core/providers/types';
 import type { Conversation, ChatMessage } from '../../../core/types';
+import { ensureReasonixTurnIds } from '../turnIds';
 
 /**
  * Persistent message store for Reasonian.
@@ -53,6 +54,7 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
         const raw = await this.vaultAdapter.read(filePath);
         const messages = JSON.parse(raw) as ChatMessage[];
         if (Array.isArray(messages) && messages.length > 0) {
+          ensureReasonixTurnIds(messages);
           conversation.messages = messages;
         }
       }
@@ -108,9 +110,18 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
     sourceProviderState?: Record<string, unknown>,
   ): Record<string, unknown> {
     return {
+      ...sourceProviderState,
       sourceSessionId,
       resumeAt,
-      ...sourceProviderState,
     };
+  }
+
+  buildPersistedProviderState(conversation: Conversation): Record<string, unknown> | undefined {
+    const providerState = {
+      ...(conversation.providerState ?? {}),
+      conversationId: conversation.id,
+    };
+
+    return Object.keys(providerState).length > 0 ? providerState : undefined;
   }
 }

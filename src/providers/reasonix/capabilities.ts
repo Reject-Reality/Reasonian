@@ -5,8 +5,8 @@ export const REASONIX_PROVIDER_CAPABILITIES: Readonly<ProviderCapabilities> = Ob
   supportsPersistentRuntime: false,  // Reasonix uses library API, not persistent process
   supportsNativeHistory: true,       // JSONL session storage
   supportsPlanMode: true,            // registerPlanTool()
-  supportsRewind: false,             // Not in scope for v1
-  supportsFork: false,               // Not in scope for v1
+  supportsRewind: true,              // Loop history can rewind to Reasonix user turns
+  supportsFork: true,                // Forks rebuild loop state from persisted messages
   supportsProviderCommands: true,    // Static Reasonix command catalog
   supportsImageAttachments: false,   // Reasonix chat messages are text-only for now
   supportsInstructionMode: true,     // Instruction refinement

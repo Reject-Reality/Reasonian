@@ -22,9 +22,9 @@ export const reasonixProviderRegistration: ProviderRegistration = {
     runtime.setPlugin(plugin);
     return runtime;
   },
-  createTitleGenerationService: (_plugin) => new ReasonixTitleGenerationService(),
-  createInstructionRefineService: (_plugin) => new ReasonixInstructionRefineService(),
-  createInlineEditService: (_plugin) => new ReasonixInlineEditService(),
+  createTitleGenerationService: (plugin) => new ReasonixTitleGenerationService(plugin),
+  createInstructionRefineService: (plugin) => new ReasonixInstructionRefineService(plugin),
+  createInlineEditService: (plugin) => new ReasonixInlineEditService(plugin),
   historyService: new ReasonixConversationHistoryService(),
   taskResultInterpreter: new ReasonixTaskResultInterpreter(),
 };

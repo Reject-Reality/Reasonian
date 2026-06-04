@@ -18,7 +18,6 @@ import {
   mkdirSync,
   promises as fsPromises,
   readFileSync,
-  rmSync,
 } from 'fs';
 
 
@@ -46,14 +45,25 @@ const REASONIX_GRAMMAR_SOURCES = [
   [path.join(REASONIX_ROOT, 'node_modules', 'web-tree-sitter', 'web-tree-sitter.wasm'), 'web-tree-sitter.wasm'],
 ];
 
-function copyReasonixGrammars(targetDir) {
+function copyReasonixGrammars(targetDir, options = {}) {
+  const strict = options.strict === true;
+  const missing = [];
+
   mkdirSync(targetDir, { recursive: true });
   for (const [source, filename] of REASONIX_GRAMMAR_SOURCES) {
     if (!existsSync(source)) {
-      console.warn(`Reasonix grammar asset missing: ${source}`);
+      missing.push(source);
       continue;
     }
     copyFileSync(source, path.join(targetDir, filename));
+  }
+
+  if (missing.length > 0) {
+    const message = `Reasonix grammar asset${missing.length === 1 ? '' : 's'} missing:\n${missing.join('\n')}`;
+    if (strict) {
+      throw new Error(message);
+    }
+    console.warn(message);
   }
 }
 
@@ -151,6 +161,8 @@ const context = await esbuild.context({
 
 if (prod) {
   await context.rebuild();
+  copyReasonixGrammars(path.resolve('grammars'), { strict: true });
+  console.log('Copied Reasonix grammar assets to release grammars/');
   process.exit(0);
 } else {
   await context.watch();
