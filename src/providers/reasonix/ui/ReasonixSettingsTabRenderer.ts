@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { Setting } from 'obsidian';
+import { Notice, Setting } from 'obsidian';
 
 import type { McpServerManager } from '../../../core/mcp/McpServerManager';
 import type {
@@ -11,6 +11,7 @@ import { renderEnvironmentSettingsSection } from '../../../features/settings/ui/
 import { McpSettingsManager } from '../../../features/settings/ui/McpSettingsManager';
 import { getVaultPath } from '../../../utils/path';
 import { ReasonixCommandCatalog } from '../app/ReasonixCommandCatalog';
+import { runReasonixAuxiliaryChat } from '../auxiliary/ReasonixAuxiliaryClient';
 import { ReasonixCommandSettingsManager } from './ReasonixCommandSettingsManager';
 import { reasonixChatUIConfig } from './ReasonixChatUIConfig';
 import { trReasonix } from './reasonixI18n';
@@ -196,6 +197,77 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
         `MCP config: ${mcpConfigPath}`,
         `Grammar assets: ${grammarPath}`,
       ].join('\n'));
+
+    const runConnectivityCheck = async (
+      mode: 'api' | 'model',
+      triggerEl: HTMLButtonElement,
+    ): Promise<void> => {
+      const latestSettings = getReasonixProviderSettings(
+        context.plugin.settings as unknown as Record<string, unknown>,
+      );
+      if (!latestSettings.apiKey.trim()) {
+        new Notice('Add an API key before running the Reasonix connectivity check.');
+        return;
+      }
+
+      const idleLabel = mode === 'api' ? 'Test API Key' : 'Test Model';
+      const runningLabel = mode === 'api' ? 'Testing API Key...' : 'Testing Model...';
+      triggerEl.disabled = true;
+      triggerEl.setText(runningLabel);
+
+      try {
+        const reply = await runReasonixAuxiliaryChat(context.plugin, {
+          system: mode === 'api'
+            ? 'Return exactly: API connection OK'
+            : 'Return exactly: MODEL connection OK',
+          messages: [
+            {
+              role: 'user',
+              content: mode === 'api'
+                ? 'Verify the configured DeepSeek API credentials and respond with the exact success string.'
+                : `Verify that the configured model "${latestSettings.model}" is callable and respond with the exact success string.`,
+            },
+          ],
+          maxTokens: 24,
+          temperature: 0,
+          model: mode === 'api' ? undefined : latestSettings.model,
+        });
+
+        const summary = reply.replace(/\s+/g, ' ').trim();
+        const successMessage = mode === 'api'
+          ? `Reasonix API check passed. ${summary}`
+          : `Reasonix model check passed for ${latestSettings.model}. ${summary}`;
+        new Notice(successMessage, 6000);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const failureMessage = mode === 'api'
+          ? `Reasonix API check failed: ${message}`
+          : `Reasonix model check failed: ${message}`;
+        new Notice(failureMessage, 8000);
+      } finally {
+        triggerEl.disabled = false;
+        triggerEl.setText(idleLabel);
+      }
+    };
+
+    new Setting(runtimeSection)
+      .setName('Connectivity Checks')
+      .setDesc('Validate the current API key, base URL, and selected model without opening a chat tab.')
+      .addButton((button) => {
+        button
+          .setButtonText('Test API Key')
+          .onClick(async () => {
+            await runConnectivityCheck('api', button.buttonEl);
+          });
+      })
+      .addButton((button) => {
+        button
+          .setButtonText('Test Model')
+          .setCta()
+          .onClick(async () => {
+            await runConnectivityCheck('model', button.buttonEl);
+          });
+      });
 
     const memorySection = container.createDiv({ cls: 'claudian-provider-settings-section' });
     new Setting(memorySection)
