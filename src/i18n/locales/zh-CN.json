@@ -65,11 +65,11 @@
     }
   },
   "settings": {
-    "title": "Claudian 设置",
+    "title": "Reasonian 设置",
     "tabs": {
       "general": "通用",
-      "claude": "Claude",
-      "codex": "Codex"
+      "claude": "Reasonix",
+      "codex": "Reasonix"
     },
     "display": "显示",
     "conversations": "对话",
@@ -79,7 +79,7 @@
     "models": "模型",
     "experimental": "实验性功能",
     "userName": {
-      "name": "Claudian 应该如何称呼你？",
+      "name": "Reasonian 应该如何称呼你？",
       "desc": "用于个性化问候的用户名（留空使用通用问候）"
     },
     "excludedTags": {
@@ -88,7 +88,7 @@
     },
     "mediaFolder": {
       "name": "媒体文件夹",
-      "desc": "存放附件/图片的文件夹。当笔记使用 ![[image.jpg]] 时，Claude 会在此查找。留空使用仓库根目录。"
+      "desc": "存放附件/图片的文件夹。当笔记使用 ![[image.jpg]] 时，Reasonian 会在此查找。留空使用 Vault 根目录。"
     },
     "systemPrompt": {
       "name": "自定义系统提示词",
@@ -145,25 +145,25 @@
     },
     "slashCommands": {
       "name": "命令与技能",
-      "desc": "管理存储在 .claude/commands/ 和 .claude/skills/ 中的 Vault 级命令与技能。由 /名称 触发。"
+      "desc": "管理存储在 .reasonix/commands/ 和 .reasonix/skills/ 中的 Vault 级命令与技能。由 /名称 触发。"
     },
     "hiddenSlashCommands": {
       "name": "隐藏命令",
-      "desc": "从下拉菜单中隐藏特定的斜杠命令。适用于隐藏与 Claudian 无关的 Claude Code 命令。每行输入一个命令名称，无需前导斜杠。",
+      "desc": "从下拉菜单中隐藏特定的斜杠命令。适用于隐藏与你当前 Reasonian 工作流无关的命令。每行输入一个命令名称，无需前导斜杠。",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
       "name": "MCP 服务器",
-      "desc": "管理存储在 .claude/mcp.json 中的 Vault 级 MCP 服务器配置。启用上下文保存模式的服务器需要 @ 提及才能激活。"
+      "desc": "管理存储在 .reasonix/mcp.json 中的 Vault 级 MCP 服务器配置。启用上下文保存模式的服务器需要 @ 提及才能激活。"
     },
     "plugins": {
-      "name": "Claude Code 插件",
-      "desc": "管理从 ~/.claude/plugins 发现的 Claude Code 插件。启用的插件按 Vault 存储在 .claude/settings.json 中。"
+      "name": "旧版插件",
+      "desc": "Reasonian MVP 运行时不使用旧版插件发现能力。"
     },
     "subagents": {
       "name": "子代理",
-      "desc": "管理存储在 .claude/agents/ 中的 Vault 级子代理。每个 Markdown 文件定义一个自定义代理。",
-      "noAgents": "尚未配置子代理。点击 + 创建一个。",
+      "desc": "为后续 Reasonix 原生子代理集成预留。",
+      "noAgents": "尚未配置子代理。",
       "deleteConfirm": "删除子代理“{name}”？",
       "saveFailed": "保存子代理失败：{message}",
       "refreshFailed": "刷新子代理失败：{message}",
@@ -200,8 +200,8 @@
     },
     "safety": "安全",
     "loadUserSettings": {
-      "name": "加载用户 Claude 设置",
-      "desc": "加载 ~/.claude/settings.json。启用后，用户的 Claude Code 权限规则可能绕过安全模式。"
+      "name": "加载旧版用户设置",
+      "desc": "Reasonian MVP 运行时不使用旧版用户设置。"
     },
     "claudeSafeMode": {
       "name": "Safe mode",
@@ -214,7 +214,7 @@
     "environment": "环境",
     "customVariables": {
       "name": "自定义变量",
-      "desc": "Claude SDK 的环境变量（KEY=VALUE 格式，每行一个）。支持 export 前缀。"
+      "desc": "Reasonian 与 Reasonix 运行时集成使用的环境变量（KEY=VALUE 格式，每行一个）。支持 shell export 前缀。"
     },
     "envSnippets": {
       "name": "片段",
@@ -250,12 +250,12 @@
     },
     "customModels": {
       "name": "Custom models",
-      "desc": "Append additional Claude model IDs to the picker, one per line. Environment model overrides still replace the picker.",
-      "placeholder": "claude-opus-4-6\nclaude-opus-4-6[1m]\nclaude-opus-4-5-20251101"
+      "desc": "向模型选择器追加自定义模型 ID，每行一个。环境变量中的模型覆盖仍会优先生效。",
+      "placeholder": "deepseek-v4-flash\ndeepseek-v4-pro\ndeepseek-v4-pro-experimental"
     },
     "enableChrome": {
       "name": "启用 Chrome 扩展",
-      "desc": "允许 Claude 通过 claude-in-chrome 扩展与 Chrome 交互。需要安装该扩展。需要重启会话。"
+      "desc": "为浏览器辅助工作流预留。需要兼容的浏览器桥接能力并重启会话。"
     },
     "enableBangBash": {
       "name": "启用命令模式 (!)",
@@ -266,7 +266,7 @@
     },
     "maxTabs": {
       "name": "最大聊天标签数",
-      "desc": "同时开启的最大聊天标签数（3-10）。每个标签使用独立的 Claude 会话。",
+      "desc": "同时开启的最大聊天标签数（3-10）。每个标签使用独立的 Reasonix 会话。",
       "warning": "超过 5 个标签可能会影响性能和内存使用。"
     },
     "tabBarPosition": {
@@ -277,17 +277,17 @@
     },
     "enableAutoScroll": {
       "name": "流式传输时自动滚动",
-      "desc": "在 Claude 流式传输响应时自动滚动到底部。禁用后将停留在顶部，从头开始阅读。"
+      "desc": "在 Reasonix 流式传输响应时自动滚动到底部。禁用后将停留在顶部，从头开始阅读。"
     },
     "openInMainTab": {
       "name": "在主编辑器区域打开",
       "desc": "在中央编辑器区域以主标签页形式打开聊天面板，而不是在右侧边栏"
     },
     "cliPath": {
-      "name": "Claude CLI 路径",
-      "desc": "Claude Code CLI 的自定义路径。留空使用自动检测。",
-      "descWindows": "对于原生安装程序，使用 claude.exe。对于 npm/pnpm/yarn 或其他包管理器安装，使用 cli.js 路径（不是 claude.cmd）。",
-      "descUnix": "粘贴 \"which claude\" 的输出 - 适用于原生安装和 npm/pnpm/yarn 安装。",
+      "name": "旧版 CLI 路径",
+      "desc": "Reasonian MVP 运行时不使用旧版 CLI 集成。",
+      "descWindows": "Reasonian MVP 中未使用。",
+      "descUnix": "Reasonian MVP 中未使用。",
       "validation": {
         "notExist": "路径不存在",
         "isDirectory": "路径是目录，不是文件"

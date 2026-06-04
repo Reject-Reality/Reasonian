@@ -287,7 +287,7 @@
       "name": "Legacy CLI path",
       "desc": "Legacy CLI integration is not used by the Reasonian MVP runtime.",
       "descWindows": "Unused for Reasonian MVP.",
-      "descUnix": "Paste the output of \"which claude\" — works for both native and npm/pnpm/yarn installs.",
+      "descUnix": "Unused for Reasonian MVP.",
       "validation": {
         "notExist": "Path does not exist",
         "isDirectory": "Path is a directory, not a file"
