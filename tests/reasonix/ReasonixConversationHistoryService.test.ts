@@ -168,4 +168,80 @@ describe('ReasonixConversationHistoryService', () => {
     expect(deletedPaths).toEqual(['.reasonix/sessions/session-1.messages.json']);
     expect(conversation.messages).toEqual([]);
   });
+
+  it('round-trips saved messages through the vault adapter and restores turn ids', async () => {
+    const files = new Map<string, string>();
+    const folders = new Set<string>();
+    const service = new ReasonixConversationHistoryService();
+
+    service.setVaultAdapter(createAdapter({
+      exists: async (path) => files.has(path) || folders.has(path),
+      mkdir: async (path) => {
+        folders.add(path);
+      },
+      write: async (path, data) => {
+        files.set(path, data);
+      },
+      read: async (path) => {
+        const value = files.get(path);
+        if (value === undefined) {
+          throw new Error(`Missing file: ${path}`);
+        }
+        return value;
+      },
+    }));
+
+    const sourceConversation = createConversation();
+    sourceConversation.messages = [
+      {
+        id: 'user-1',
+        role: 'user',
+        content: 'hello round trip',
+        timestamp: 1,
+      },
+      {
+        id: 'assistant-1',
+        role: 'assistant',
+        content: 'restored',
+        timestamp: 2,
+      },
+    ];
+
+    await service.saveMessages(sourceConversation);
+
+    const restoredConversation = createConversation();
+    await service.hydrateConversationHistory(restoredConversation, null);
+
+    expect(restoredConversation.messages).toHaveLength(2);
+    expect(restoredConversation.messages[0]?.content).toBe('hello round trip');
+    expect(restoredConversation.messages[0]?.userMessageId).toBe('reasonix:user-turn:0');
+    expect(restoredConversation.messages[1]?.assistantMessageId).toBe('reasonix:assistant-turn:0');
+  });
+
+  it('returns the session id fallback chain for fork source resolution', () => {
+    const service = new ReasonixConversationHistoryService();
+    const conversation = createConversation();
+
+    expect(service.resolveSessionIdForConversation(conversation)).toBe('session-1');
+
+    conversation.sessionId = null;
+    expect(service.resolveSessionIdForConversation(conversation)).toBe('conv-1');
+    expect(service.resolveSessionIdForConversation(null)).toBeNull();
+  });
+
+  it('builds fork provider state by preserving source provider metadata', () => {
+    const service = new ReasonixConversationHistoryService();
+
+    expect(service.isPendingForkConversation(createConversation())).toBe(false);
+    expect(service.buildForkProviderState(
+      'source-session',
+      'reasonix:assistant-turn:3',
+      { model: 'deepseek-v4-pro', branch: 'fork-a' },
+    )).toEqual({
+      model: 'deepseek-v4-pro',
+      branch: 'fork-a',
+      sourceSessionId: 'source-session',
+      resumeAt: 'reasonix:assistant-turn:3',
+    });
+  });
 });
