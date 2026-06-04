@@ -84,7 +84,7 @@ type ReasonixTranslationKey =
   | 'environmentPlaceholder';
 
 const EN_US: Record<ReasonixTranslationKey, string> = {
-  workspaceHeading: 'Reasonix Workspace',
+  workspaceHeading: 'Reasonian Setup',
   memorySectionName: 'Reasonix Memory',
   memorySectionDesc: 'Load Reasonix project memory and user memory into the system prompt.',
   enableMemoryName: 'Enable memory',
@@ -160,7 +160,7 @@ const EN_US: Record<ReasonixTranslationKey, string> = {
   deleteConfirm: 'Delete /{name}?',
   mcpSectionName: 'MCP Servers',
   mcpSectionDesc: 'Manage vault-level MCP server settings stored in .reasonix/mcp.json.',
-  environmentHeading: 'Provider Environment',
+  environmentHeading: 'Reasonian Runtime Environment',
   environmentName: 'Reasonix environment',
   environmentDesc: 'Variables loaded only for the Reasonix provider runtime.',
   environmentPlaceholder: 'DEEPSEEK_API_KEY=sk-...\nHTTPS_PROXY=http://proxy.example.com:8080',
@@ -170,7 +170,7 @@ const REASONIX_TRANSLATIONS: Record<Locale, Record<ReasonixTranslationKey, strin
   en: EN_US,
   'zh-CN': {
     ...EN_US,
-    workspaceHeading: 'Reasonix 工作区',
+    workspaceHeading: 'Reasonian 设置',
     memorySectionName: 'Reasonix 记忆',
     memorySectionDesc: '将 Reasonix 项目记忆和用户记忆加载到系统提示词中。',
     enableMemoryName: '启用记忆',
@@ -238,13 +238,13 @@ const REASONIX_TRANSLATIONS: Record<Locale, Record<ReasonixTranslationKey, strin
     deleteConfirm: '确定删除 /{name} 吗？',
     mcpSectionName: 'MCP 服务器',
     mcpSectionDesc: '管理存储在 .reasonix/mcp.json 中的仓库级 MCP 服务器设置。',
-    environmentHeading: 'Provider 环境',
+    environmentHeading: 'Reasonian 运行环境',
     environmentName: 'Reasonix 环境',
     environmentDesc: '仅为 Reasonix 提供方运行时加载的变量。',
   },
   'zh-TW': {
     ...EN_US,
-    workspaceHeading: 'Reasonix 工作區',
+    workspaceHeading: 'Reasonian 設定',
     memorySectionName: 'Reasonix 記憶',
     memorySectionDesc: '將 Reasonix 專案記憶和使用者記憶載入到系統提示詞中。',
     enableMemoryName: '啟用記憶',
@@ -312,7 +312,7 @@ const REASONIX_TRANSLATIONS: Record<Locale, Record<ReasonixTranslationKey, strin
     deleteConfirm: '確定刪除 /{name} 嗎？',
     mcpSectionName: 'MCP 伺服器',
     mcpSectionDesc: '管理儲存在 .reasonix/mcp.json 中的保管庫層級 MCP 伺服器設定。',
-    environmentHeading: 'Provider 環境',
+    environmentHeading: 'Reasonian 執行環境',
     environmentName: 'Reasonix 環境',
     environmentDesc: '只為 Reasonix 提供者執行階段載入的變數。',
   },

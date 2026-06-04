@@ -97,6 +97,32 @@ export class ClaudianSettingTab extends PluginSettingTab {
     setLocale(this.plugin.settings.locale as Locale);
 
     const providerTabs = ProviderRegistry.getRegisteredProviderIds();
+    if (providerTabs.length === 1) {
+      this.renderGeneralTab(containerEl);
+
+      const providerId = providerTabs[0];
+      const providerContainer = containerEl.createDiv({
+        cls: 'claudian-settings-provider-single',
+      });
+
+      ProviderWorkspaceRegistry.getSettingsTabRenderer(providerId)?.render(providerContainer, {
+        plugin: this.plugin,
+        renderHiddenProviderCommandSetting: (
+          target,
+          targetProviderId,
+          copy,
+        ) => this.renderHiddenProviderCommandSetting(target, targetProviderId, copy),
+        refreshModelSelectors: () => {
+          for (const view of this.plugin.getAllViews()) {
+            view.refreshModelSelector();
+          }
+        },
+        renderCustomContextLimits: (target, targetProviderId) =>
+          this.renderCustomContextLimits(target, targetProviderId),
+      });
+      return;
+    }
+
     const tabIds: SettingsTabId[] = ['general', ...providerTabs];
     if (!tabIds.includes(this.activeTab)) {
       this.activeTab = 'general';
