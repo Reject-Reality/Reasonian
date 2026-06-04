@@ -2,6 +2,8 @@ import type { ProviderConversationHistoryService } from '../../../core/providers
 import type { Conversation, ChatMessage } from '../../../core/types';
 import { ensureReasonixTurnIds } from '../turnIds';
 
+const REASONIX_HISTORY_RECOVERY_FLAG = 'reasonixHistoryRecoveryWarning';
+
 /**
  * Persistent message store for Reasonian.
  * Messages are saved alongside Claudian's session metadata using Obsidian's Vault adapter.
@@ -48,6 +50,14 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
     if (!sessionId || !this.vaultAdapter) return;
 
     const filePath = this.messagePath(sessionId);
+    if (conversation.providerState?.[REASONIX_HISTORY_RECOVERY_FLAG]) {
+      const nextProviderState = { ...conversation.providerState };
+      delete nextProviderState[REASONIX_HISTORY_RECOVERY_FLAG];
+      conversation.providerState = Object.keys(nextProviderState).length > 0
+        ? nextProviderState
+        : undefined;
+    }
+
     try {
       const exists = await this.vaultAdapter.exists(filePath);
       if (exists) {
@@ -58,8 +68,13 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
           conversation.messages = messages;
         }
       }
-    } catch {
-      // File doesn't exist or is corrupted — start fresh
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      conversation.messages = [];
+      conversation.providerState = {
+        ...(conversation.providerState ?? {}),
+        [REASONIX_HISTORY_RECOVERY_FLAG]: `Reasonian recovered this session without saved messages because ${filePath} could not be loaded (${message}).`,
+      };
     }
   }
 
@@ -120,7 +135,9 @@ export class ReasonixConversationHistoryService implements ProviderConversationH
     const providerState = {
       ...(conversation.providerState ?? {}),
       conversationId: conversation.id,
-    };
+    } as Record<string, unknown>;
+
+    delete providerState[REASONIX_HISTORY_RECOVERY_FLAG];
 
     return Object.keys(providerState).length > 0 ? providerState : undefined;
   }

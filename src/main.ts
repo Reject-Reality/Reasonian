@@ -511,6 +511,17 @@ export default class ClaudianPlugin extends Plugin {
     await ProviderRegistry
       .getConversationHistoryService(conversation.providerId)
       .hydrateConversationHistory(conversation, getVaultPath(this.app));
+
+    const recoveryWarning = conversation.providerState?.reasonixHistoryRecoveryWarning;
+    if (typeof recoveryWarning === 'string' && recoveryWarning.trim()) {
+      new Notice(recoveryWarning, 9000);
+
+      const nextProviderState = { ...(conversation.providerState ?? {}) };
+      delete nextProviderState.reasonixHistoryRecoveryWarning;
+      conversation.providerState = Object.keys(nextProviderState).length > 0
+        ? nextProviderState
+        : undefined;
+    }
   }
 
   /** Returns the runtime environment variables for the active provider. */
