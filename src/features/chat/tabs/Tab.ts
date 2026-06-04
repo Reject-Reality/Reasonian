@@ -34,7 +34,6 @@ import { SelectionController } from '../controllers/SelectionController';
 import { StreamController } from '../controllers/StreamController';
 import { MessageRenderer } from '../rendering/MessageRenderer';
 import { cleanupThinkingBlock } from '../rendering/ThinkingBlockRenderer';
-import { findRewindContext } from '../rewind';
 import { BangBashService } from '../services/BangBashService';
 import { SubagentManager } from '../services/SubagentManager';
 import { ChatState } from '../state/ChatState';
@@ -46,7 +45,11 @@ import { InstructionModeManager as InstructionModeManagerClass } from '../ui/Ins
 import { NavigationSidebar } from '../ui/NavigationSidebar';
 import { StatusPanel } from '../ui/StatusPanel';
 import { recalculateUsageForModel } from '../utils/usageInfo';
-import { countUserMessagesForForkTitle } from './forkUtils';
+import {
+  buildForkAllSnapshot,
+  buildForkAtUserMessageSnapshot,
+  countUserMessagesForForkTitle,
+} from './forkUtils';
 import { getTabProviderId } from './providerResolution';
 import type { TabData, TabDOMElements, TabId, TabProviderContext } from './types';
 import { generateTabId, TEXTAREA_MAX_HEIGHT_PERCENT, TEXTAREA_MIN_MAX_HEIGHT } from './types';
@@ -1026,8 +1029,8 @@ async function handleForkRequest(
     return;
   }
 
-  const rewindCtx = findRewindContext(msgs, userIdx);
-  if (!rewindCtx.hasResponse || !rewindCtx.prevAssistantUuid) {
+  const forkSnapshot = buildForkAtUserMessageSnapshot(msgs, userIdx);
+  if (!forkSnapshot) {
     new Notice(t('chat.fork.unavailableNoResponse'));
     return;
   }
@@ -1036,13 +1039,13 @@ async function handleForkRequest(
   if (!source) return;
 
   await forkRequestCallback({
-    messages: deepCloneMessages(msgs.slice(0, userIdx)),
+    messages: deepCloneMessages(forkSnapshot.messages),
     providerId: source.providerId,
     sourceSessionId: source.sourceSessionId,
     sourceProviderState: source.sourceProviderState,
-    resumeAt: rewindCtx.prevAssistantUuid,
+    resumeAt: forkSnapshot.resumeAt,
     sourceTitle: source.sourceTitle,
-    forkAtUserMessage: countUserMessagesForForkTitle(msgs.slice(0, userIdx + 1)),
+    forkAtUserMessage: forkSnapshot.forkAtUserMessage,
     currentNote: source.currentNote,
   });
 }
@@ -1070,15 +1073,8 @@ async function handleForkAll(
     return;
   }
 
-  let lastAssistantUuid: string | undefined;
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    if (msgs[i].role === 'assistant' && msgs[i].assistantMessageId) {
-      lastAssistantUuid = msgs[i].assistantMessageId;
-      break;
-    }
-  }
-
-  if (!lastAssistantUuid) {
+  const forkSnapshot = buildForkAllSnapshot(msgs);
+  if (!forkSnapshot) {
     new Notice(t('chat.fork.commandNoAssistantUuid'));
     return;
   }
@@ -1087,13 +1083,13 @@ async function handleForkAll(
   if (!source) return;
 
   await forkRequestCallback({
-    messages: deepCloneMessages(msgs),
+    messages: deepCloneMessages(forkSnapshot.messages),
     providerId: source.providerId,
     sourceSessionId: source.sourceSessionId,
     sourceProviderState: source.sourceProviderState,
-    resumeAt: lastAssistantUuid,
+    resumeAt: forkSnapshot.resumeAt,
     sourceTitle: source.sourceTitle,
-    forkAtUserMessage: countUserMessagesForForkTitle(msgs) + 1,
+    forkAtUserMessage: forkSnapshot.forkAtUserMessage,
     currentNote: source.currentNote,
   });
 }

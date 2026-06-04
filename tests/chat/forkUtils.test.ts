@@ -1,5 +1,7 @@
 import type { ChatMessage } from '../../src/core/types';
 import {
+  buildForkAllSnapshot,
+  buildForkAtUserMessageSnapshot,
   buildForkTitle,
   countUserMessagesForForkTitle,
 } from '../../src/features/chat/tabs/forkUtils';
@@ -52,6 +54,60 @@ describe('forkUtils', () => {
       ];
 
       expect(buildForkTitle('Project plan', existingTitles, 2)).toBe('Fork: Project plan (#2) 3');
+    });
+  });
+
+  describe('buildForkAtUserMessageSnapshot', () => {
+    it('cuts messages before the selected user turn and uses the previous assistant checkpoint', () => {
+      const messages: ChatMessage[] = [
+        createMessage({ id: 'u1', role: 'user', content: 'first', userMessageId: 'reasonix:user-turn:0' }),
+        createMessage({ id: 'a1', role: 'assistant', content: 'reply1', assistantMessageId: 'reasonix:assistant-turn:0' }),
+        createMessage({ id: 'u2', role: 'user', content: 'second', userMessageId: 'reasonix:user-turn:1' }),
+        createMessage({ id: 'a2', role: 'assistant', content: 'reply2', assistantMessageId: 'reasonix:assistant-turn:1' }),
+      ];
+
+      expect(buildForkAtUserMessageSnapshot(messages, 2)).toEqual({
+        messages: messages.slice(0, 2),
+        resumeAt: 'reasonix:assistant-turn:0',
+        forkAtUserMessage: 2,
+      });
+    });
+
+    it('returns null when the selected turn has no completed assistant response', () => {
+      const messages: ChatMessage[] = [
+        createMessage({ id: 'u1', role: 'user', content: 'first', userMessageId: 'reasonix:user-turn:0' }),
+        createMessage({ id: 'a1', role: 'assistant', content: 'reply1', assistantMessageId: 'reasonix:assistant-turn:0' }),
+        createMessage({ id: 'u2', role: 'user', content: 'second', userMessageId: 'reasonix:user-turn:1' }),
+        createMessage({ id: 'u3', role: 'user', content: 'third', userMessageId: 'reasonix:user-turn:2' }),
+      ];
+
+      expect(buildForkAtUserMessageSnapshot(messages, 2)).toBeNull();
+      expect(buildForkAtUserMessageSnapshot(messages, -1)).toBeNull();
+    });
+  });
+
+  describe('buildForkAllSnapshot', () => {
+    it('forks all messages from the latest assistant checkpoint and next user index', () => {
+      const messages: ChatMessage[] = [
+        createMessage({ role: 'user', content: 'first', userMessageId: 'reasonix:user-turn:0' }),
+        createMessage({ role: 'assistant', content: 'reply1', assistantMessageId: 'reasonix:assistant-turn:0' }),
+        createMessage({ role: 'user', content: 'second', userMessageId: 'reasonix:user-turn:1' }),
+        createMessage({ role: 'assistant', content: 'reply2', assistantMessageId: 'reasonix:assistant-turn:1' }),
+      ];
+
+      expect(buildForkAllSnapshot(messages)).toEqual({
+        messages,
+        resumeAt: 'reasonix:assistant-turn:1',
+        forkAtUserMessage: 3,
+      });
+    });
+
+    it('returns null when no assistant checkpoint exists', () => {
+      const messages: ChatMessage[] = [
+        createMessage({ role: 'user', content: 'only user', userMessageId: 'reasonix:user-turn:0' }),
+      ];
+
+      expect(buildForkAllSnapshot(messages)).toBeNull();
     });
   });
 });
