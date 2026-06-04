@@ -8,7 +8,8 @@
     "dev": "npm run build:css && node esbuild.config.mjs",
     "build": "node scripts/build.mjs production",
     "verify:release": "node scripts/verify-release-assets.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand"
   },
   "keywords": [
     "reasonix",
