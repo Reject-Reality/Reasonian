@@ -90,6 +90,7 @@ import {
   resolveReasonixApprovalDecision,
   shouldBypassReasonixApprovals,
 } from './reasonixApprovalPolicy';
+import { trimMessagesToAssistantCheckpoint } from './reasonixResumeCheckpoint';
 
 const PROVIDER_ID = 'reasonix';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
@@ -139,6 +140,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
   private conversationKey: string | null = null;
   private cancelled = false;
   private turnMetadata: ChatTurnMetadata = {};
+  private pendingResumeCheckpointId: string | undefined;
   private readyListeners = new Set<(ready: boolean) => void>();
   private activeMcpBridge: ActiveMcpBridge | null = null;
   private externalContextRoots: string[] = [];
@@ -646,13 +648,18 @@ export class ReasonixChatRuntime implements ChatRuntime {
     this.loop.log.initWindow(hydrated);
     this.loopHydrated = true;
     this.pendingHydrationMessages = null;
+    this.pendingResumeCheckpointId = undefined;
   }
 
   private mapConversationToLoopMessages(messages: ChatMessage[]): ReasonixChatMessage[] {
+    const scopedMessages = trimMessagesToAssistantCheckpoint(
+      messages,
+      this.pendingResumeCheckpointId,
+    );
     const mapped: ReasonixChatMessage[] = [];
     let skipAssistantAfterLocalCommand = false;
 
-    for (const message of messages) {
+    for (const message of scopedMessages) {
       if (message.role === 'user') {
         if (isReasonixLocalSdkCommandUserMessage(message)) {
           skipAssistantAfterLocalCommand = true;
@@ -1725,7 +1732,9 @@ export class ReasonixChatRuntime implements ChatRuntime {
     };
   }
 
-  setResumeCheckpoint(_checkpointId: string | undefined): void {}
+  setResumeCheckpoint(checkpointId: string | undefined): void {
+    this.pendingResumeCheckpointId = checkpointId;
+  }
 
   private getProviderStateString(
     conversation: ChatRuntimeConversationState | null,
@@ -1769,6 +1778,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       this.pendingHydrationMessages = null;
       this.loopHydrated = false;
       this.sessionInvalidated = false;
+      this.pendingResumeCheckpointId = undefined;
       this.turnMetadata = {};
       void this.clearMcpBridge();
     }
@@ -2061,6 +2071,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     this.pendingHydrationMessages = null;
     this.loopHydrated = false;
     this.sessionInvalidated = false;
+    this.pendingResumeCheckpointId = undefined;
     this.turnMetadata = {};
     void this.clearMcpBridge();
   }
@@ -2092,6 +2103,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     this.currentSystemPrompt = '';
     this.pendingHydrationMessages = null;
     this.loopHydrated = false;
+    this.pendingResumeCheckpointId = undefined;
     void this.clearMcpBridge();
   }
 
@@ -2121,6 +2133,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
       this.pendingHydrationMessages = null;
     }
 
+    this.pendingResumeCheckpointId = undefined;
     this.turnMetadata = {};
     return { canRewind: true };
   }
