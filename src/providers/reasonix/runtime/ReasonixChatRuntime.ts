@@ -75,13 +75,6 @@ import {
   normalizePathForComparison,
 } from '../../../utils/path';
 import { buildSystemPrompt } from '../../../core/prompt/mainAgent';
-import { appendBrowserContext } from '../../../utils/browser';
-import { appendCanvasContext } from '../../../utils/canvas';
-import {
-  appendContextFiles,
-  appendCurrentNote,
-} from '../../../utils/context';
-import { appendEditorContext } from '../../../utils/editor';
 import {
   countReasonixUserTurns,
   isReasonixLocalSdkCommandUserMessage,
@@ -89,6 +82,7 @@ import {
   makeReasonixUserTurnId,
   parseReasonixUserTurnIndex,
 } from '../turnIds';
+import { appendReasonixObsidianContext } from './reasonixTurnPreparation';
 
 const PROVIDER_ID = 'reasonix';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
@@ -1689,35 +1683,6 @@ export class ReasonixChatRuntime implements ChatRuntime {
     return REASONIX_PROVIDER_CAPABILITIES;
   }
 
-  private appendObsidianContext(
-    content: string,
-    request: ChatTurnRequest,
-    isCompact: boolean,
-  ): string {
-    if (isCompact) {
-      return content;
-    }
-
-    let next = content;
-    if (request.currentNotePath) {
-      next = appendCurrentNote(next, request.currentNotePath);
-    }
-    if (request.editorSelection) {
-      next = appendEditorContext(next, request.editorSelection);
-    }
-    if (request.browserSelection) {
-      next = appendBrowserContext(next, request.browserSelection);
-    }
-    if (request.canvasSelection) {
-      next = appendCanvasContext(next, request.canvasSelection);
-    }
-    if (request.externalContextPaths && request.externalContextPaths.length > 0) {
-      next = appendContextFiles(next, request.externalContextPaths);
-    }
-
-    return next;
-  }
-
   prepareTurn(request: ChatTurnRequest): PreparedChatTurn {
     const manager = this.getMcpServerManager();
     const mcpMentions = manager?.extractMentions(request.text) ?? new Set<string>();
@@ -1729,7 +1694,7 @@ export class ReasonixChatRuntime implements ChatRuntime {
     const baseContent = parsedCommand && !isLocalSdkCommand
       ? this.applySlashCommandTemplate(parsedCommand.command, parsedCommand.args)
       : request.text;
-    const persistedContent = this.appendObsidianContext(
+    const persistedContent = appendReasonixObsidianContext(
       baseContent,
       request,
       isCompact,
