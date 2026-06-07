@@ -83,6 +83,13 @@ import {
   parseReasonixUserTurnIndex,
 } from '../turnIds';
 import { appendReasonixObsidianContext } from './reasonixTurnPreparation';
+import {
+  buildCommandApprovalOptions,
+  buildPathApprovalOptions,
+  normalizeReasonixPermissionMode,
+  resolveReasonixApprovalDecision,
+  shouldBypassReasonixApprovals,
+} from './reasonixApprovalPolicy';
 
 const PROVIDER_ID = 'reasonix';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
@@ -548,6 +555,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
         }
       },
     } as LoopConfirmationGate;
+  }
+
+  private getPermissionMode() {
+    return normalizeReasonixPermissionMode(this.plugin?.settings?.permissionMode);
   }
 
   private ensureTooling(): void {
@@ -1028,6 +1039,11 @@ export class ReasonixChatRuntime implements ChatRuntime {
     | { type: 'always_allow'; prefix: string }
     | { type: 'deny'; denyContext?: string }
   > {
+    const permissionMode = this.getPermissionMode();
+    if (shouldBypassReasonixApprovals(permissionMode)) {
+      return { type: 'run_once' };
+    }
+
     if (!this.approvalCallback) {
       return { type: 'deny', denyContext: 'No approval UI is available.' };
     }
@@ -1036,18 +1052,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
       kind,
       payload as Record<string, unknown>,
       `${kind === 'run_background' ? 'Start background command' : 'Run command'}: ${payload.command}`,
+      buildCommandApprovalOptions(permissionMode, kind, payload),
     );
 
-    if (decision === 'allow') {
-      return { type: 'run_once' };
-    }
-    if (decision === 'allow-always') {
-      return {
-        type: 'always_allow',
-        prefix: payload.command.split(/\s+/).filter(Boolean)[0] ?? payload.command,
-      };
-    }
-    return { type: 'deny' };
+    return resolveReasonixApprovalDecision(permissionMode, decision, kind, payload);
   }
 
   private async handlePathAccessPause(payload: {
@@ -1061,7 +1069,12 @@ export class ReasonixChatRuntime implements ChatRuntime {
     | { type: 'always_allow'; prefix: string }
     | { type: 'deny'; denyContext?: string }
   > {
+    const permissionMode = this.getPermissionMode();
     if (payload.intent === 'read' && this.isPathInExternalContext(payload.path)) {
+      return { type: 'run_once' };
+    }
+
+    if (shouldBypassReasonixApprovals(permissionMode)) {
       return { type: 'run_once' };
     }
 
@@ -1073,15 +1086,10 @@ export class ReasonixChatRuntime implements ChatRuntime {
       payload.toolName,
       payload as unknown as Record<string, unknown>,
       `${payload.toolName} requests ${payload.intent} access to ${payload.path}`,
+      buildPathApprovalOptions(permissionMode, payload),
     );
 
-    if (decision === 'allow') {
-      return { type: 'run_once' };
-    }
-    if (decision === 'allow-always') {
-      return { type: 'always_allow', prefix: payload.allowPrefix };
-    }
-    return { type: 'deny' };
+    return resolveReasonixApprovalDecision(permissionMode, decision, 'path_access', payload);
   }
 
   private setExternalContextRoots(paths?: string[]): void {
