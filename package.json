@@ -9,6 +9,7 @@
     "build": "node scripts/build.mjs production",
     "verify:release": "node scripts/verify-release-assets.mjs",
     "verify:install": "node scripts/verify-obsidian-install.mjs",
+    "prepare:clean-vault": "node scripts/prepare-clean-vault.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand"
   },
