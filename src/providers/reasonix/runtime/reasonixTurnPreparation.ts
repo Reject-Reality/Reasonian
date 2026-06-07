@@ -30,6 +30,7 @@ export function appendReasonixObsidianContext(
     next = appendCanvasContext(next, request.canvasSelection);
   }
   const contextFiles = mergeContextFiles(
+    request.currentNotePath,
     request.contextFiles,
     request.externalContextPaths,
   );
@@ -41,19 +42,27 @@ export function appendReasonixObsidianContext(
 }
 
 function mergeContextFiles(
+  currentNotePath?: string,
   contextFiles?: string[],
   externalContextPaths?: string[],
 ): string[] {
   const merged = new Set<string>();
+  const normalizedCurrentNote = currentNotePath?.trim();
 
   for (const file of contextFiles ?? []) {
     const trimmed = file.trim();
-    if (trimmed) merged.add(trimmed);
+    if (!trimmed || trimmed === normalizedCurrentNote) {
+      continue;
+    }
+    merged.add(trimmed);
   }
 
   for (const path of externalContextPaths ?? []) {
     const trimmed = path.trim();
-    if (trimmed) merged.add(trimmed);
+    if (!trimmed || trimmed === normalizedCurrentNote) {
+      continue;
+    }
+    merged.add(trimmed);
   }
 
   return [...merged];
