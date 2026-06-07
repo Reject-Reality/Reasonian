@@ -29,9 +29,32 @@ export function appendReasonixObsidianContext(
   if (request.canvasSelection) {
     next = appendCanvasContext(next, request.canvasSelection);
   }
-  if (request.externalContextPaths && request.externalContextPaths.length > 0) {
-    next = appendContextFiles(next, request.externalContextPaths);
+  const contextFiles = mergeContextFiles(
+    request.contextFiles,
+    request.externalContextPaths,
+  );
+  if (contextFiles.length > 0) {
+    next = appendContextFiles(next, contextFiles);
   }
 
   return next;
+}
+
+function mergeContextFiles(
+  contextFiles?: string[],
+  externalContextPaths?: string[],
+): string[] {
+  const merged = new Set<string>();
+
+  for (const file of contextFiles ?? []) {
+    const trimmed = file.trim();
+    if (trimmed) merged.add(trimmed);
+  }
+
+  for (const path of externalContextPaths ?? []) {
+    const trimmed = path.trim();
+    if (trimmed) merged.add(trimmed);
+  }
+
+  return [...merged];
 }

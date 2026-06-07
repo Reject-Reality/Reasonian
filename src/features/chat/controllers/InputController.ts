@@ -647,6 +647,9 @@ export class InputController {
 
     const externalContextPaths = externalContextSelector?.getExternalContexts();
     const isCompact = /^\/compact(\s|$)/i.test(options.content);
+    const contextFiles = !isCompact && fileContextManager
+      ? fileContextManager.resolveContextFilesFromMessage(options.content)
+      : [];
     const transformedText = !isCompact && fileContextManager
       ? fileContextManager.transformContextMentions(options.content)
       : options.content;
@@ -658,6 +661,7 @@ export class InputController {
         text: transformedText,
         images: options.images,
         currentNotePath: shouldSendCurrentNote && currentNotePath ? currentNotePath : undefined,
+        contextFiles: contextFiles.length > 0 ? contextFiles : undefined,
         editorSelection: editorContext,
         browserSelection: browserContext,
         canvasSelection: canvasContext,

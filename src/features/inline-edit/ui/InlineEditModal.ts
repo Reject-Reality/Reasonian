@@ -14,15 +14,10 @@ import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDro
 import { MentionDropdownController } from '../../../shared/mention/MentionDropdownController';
 import { VaultMentionDataProvider } from '../../../shared/mention/VaultMentionDataProvider';
 import {
-  createExternalContextLookupGetter,
-  findBestMentionLookupMatch,
-  isMentionStart,
   normalizeForPlatformLookup,
-  normalizeMentionPath,
-  resolveExternalMentionAtIndex,
 } from '../../../utils/contextMentionResolver';
+import { resolveContextFilesFromMessage as resolveMentionedContextFiles } from '../../../utils/contextFileMentions';
 import { type CursorContext, getEditorView } from '../../../utils/editor';
-import { buildExternalContextDisplayEntries } from '../../../utils/externalContext';
 import { externalContextScanner } from '../../../utils/externalContextScanner';
 import { escapeHtml, normalizeInsertionText } from '../../../utils/inlineEdit';
 import { getVaultPath, normalizePathForVault as normalizePathForVaultUtil } from '../../../utils/path';
@@ -702,49 +697,13 @@ class InlineEditController {
   }
 
   private resolveContextFilesFromMessage(message: string): string[] {
-    if (!message.includes('@')) return [];
-
-    const vaultFiles = this.mentionDataProvider.getCachedVaultFiles();
-
-    const pathLookup = new Map<string, string>();
-    for (const file of vaultFiles) {
-      const normalized = this.normalizePathForVault(file.path);
-      if (!normalized) continue;
-      const lookupKey = normalizeForPlatformLookup(normalizeMentionPath(normalized));
-      if (!pathLookup.has(lookupKey)) {
-        pathLookup.set(lookupKey, normalized);
-      }
-    }
-
-    const resolved = new Set<string>();
-    const externalEntries = buildExternalContextDisplayEntries(this.getExternalContexts())
-      .sort((a, b) => b.displayNameLower.length - a.displayNameLower.length);
-    const getExternalLookup = createExternalContextLookupGetter(
-      contextRoot => externalContextScanner.scanPaths([contextRoot])
-    );
-
-    for (let index = 0; index < message.length; index++) {
-      if (!isMentionStart(message, index)) continue;
-
-      const externalMatch = resolveExternalMentionAtIndex(
-        message, index, externalEntries, getExternalLookup
-      );
-      if (externalMatch) {
-        resolved.add(externalMatch.resolvedPath);
-        index = externalMatch.endIndex - 1;
-        continue;
-      }
-
-      const vaultMatch = findBestMentionLookupMatch(
-        message, index + 1, pathLookup, normalizeMentionPath, normalizeForPlatformLookup
-      );
-      if (vaultMatch) {
-        resolved.add(vaultMatch.resolvedPath);
-        index = vaultMatch.endIndex - 1;
-      }
-    }
-
-    return [...resolved];
+    return resolveMentionedContextFiles({
+      message,
+      vaultFiles: this.mentionDataProvider.getCachedVaultFiles(),
+      normalizeVaultPath: (rawPath) => this.normalizePathForVault(rawPath),
+      externalContextPaths: this.getExternalContexts(),
+      getExternalContextFiles: (contextRoot) => externalContextScanner.scanPaths([contextRoot]),
+    });
   }
 
 }

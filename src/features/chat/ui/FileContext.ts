@@ -10,6 +10,7 @@ import {
   isMentionStart,
   resolveExternalMentionAtIndex,
 } from '../../../utils/contextMentionResolver';
+import { resolveContextFilesFromMessage as resolveMentionedContextFiles } from '../../../utils/contextFileMentions';
 import { buildExternalContextDisplayEntries } from '../../../utils/externalContext';
 import { externalContextScanner } from '../../../utils/externalContextScanner';
 import { getVaultPath, normalizePathForVault as normalizePathForVaultUtil } from '../../../utils/path';
@@ -249,6 +250,16 @@ export class FileContextManager {
     if (!replaced) return text;
     chunks.push(text.slice(cursor));
     return chunks.join('');
+  }
+
+  resolveContextFilesFromMessage(text: string): string[] {
+    return resolveMentionedContextFiles({
+      message: text,
+      vaultFiles: this.mentionDataProvider.getCachedVaultFiles(),
+      normalizeVaultPath: (rawPath) => this.normalizePathForVault(rawPath),
+      externalContextPaths: this.callbacks.getExternalContexts?.() || [],
+      getExternalContextFiles: (contextRoot) => externalContextScanner.scanPaths([contextRoot]),
+    });
   }
 
   /** Cleans up event listeners (call on view close). */

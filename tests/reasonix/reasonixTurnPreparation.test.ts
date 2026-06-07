@@ -14,6 +14,7 @@ describe('appendReasonixObsidianContext', () => {
       'Base prompt',
       createRequest({
         currentNotePath: 'notes/spec.md',
+        contextFiles: ['notes/spec.md', 'repo/src/main.ts'],
         editorSelection: {
           notePath: 'notes/spec.md',
           mode: 'selection',
@@ -44,7 +45,7 @@ describe('appendReasonixObsidianContext', () => {
     expect(result).toContain('browser snippet');
     expect(result).toContain('<canvas_selection path="boards/plan.canvas">');
     expect(result).toContain('node-a, node-b');
-    expect(result).toContain('<context_files>\nrepo/src, repo/tests\n</context_files>');
+    expect(result).toContain('<context_files>\nnotes/spec.md, repo/src/main.ts, repo/src, repo/tests\n</context_files>');
   });
 
   it('skips Obsidian context injection for compact turns', () => {
