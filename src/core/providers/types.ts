@@ -94,6 +94,7 @@ export interface AppSessionStorage {
   saveMetadata(meta: SessionMetadata): Promise<void>;
   deleteMetadata(id: string): Promise<void>;
   toSessionMetadata(conv: Conversation): SessionMetadata;
+  consumeRecoveryWarnings?(): string[];
 }
 
 // ---------------------------------------------------------------------------

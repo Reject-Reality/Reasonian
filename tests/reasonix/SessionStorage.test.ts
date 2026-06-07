@@ -115,4 +115,28 @@ describe('SessionStorage resume metadata', () => {
 
     expect(loaded).toEqual(metadata);
   });
+
+  it('records recovery warnings when corrupted metadata is skipped from the session list', async () => {
+    const { adapter, files } = createAdapter();
+    const storage = new SessionStorage(adapter as never);
+
+    files.set('.claudian/sessions/valid.meta.json', JSON.stringify({
+      id: 'valid',
+      providerId: 'reasonix',
+      title: 'Valid session',
+      createdAt: 1,
+      updatedAt: 2,
+    } satisfies SessionMetadata));
+    files.set('.claudian/sessions/broken.meta.json', '{broken json');
+
+    const listed = await storage.listMetadata();
+    const warnings = storage.consumeRecoveryWarnings();
+
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.id).toBe('valid');
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('.claudian/sessions/broken.meta.json');
+    expect(warnings[0]).toContain('recovered the rest of your session list');
+    expect(storage.consumeRecoveryWarnings()).toEqual([]);
+  });
 });

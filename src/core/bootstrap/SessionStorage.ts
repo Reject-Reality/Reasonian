@@ -14,6 +14,8 @@ export {
 };
 
 export class SessionStorage {
+  private recoveryWarnings: string[] = [];
+
   constructor(private adapter: VaultFileAdapter) {}
 
   getMetadataPath(id: string): string {
@@ -47,7 +49,10 @@ export class SessionStorage {
       }
 
       return metadata;
-    } catch {
+    } catch (error) {
+      if (filePath) {
+        this.recordRecoveryWarning(filePath, error);
+      }
       return null;
     }
   }
@@ -71,8 +76,8 @@ export class SessionStorage {
         if (filePath.startsWith(`${LEGACY_SESSIONS_PATH}/`)) {
           await this.saveMetadata(raw);
         }
-      } catch {
-        // Skip files that fail to load.
+      } catch (error) {
+        this.recordRecoveryWarning(filePath, error);
       }
     }
 
@@ -121,6 +126,12 @@ export class SessionStorage {
       usage: conversation.usage,
       resumeAtMessageId: conversation.resumeAtMessageId,
     };
+  }
+
+  consumeRecoveryWarnings(): string[] {
+    const warnings = [...this.recoveryWarnings];
+    this.recoveryWarnings = [];
+    return warnings;
   }
 
   private async getLoadPath(id: string): Promise<string | null> {
@@ -175,5 +186,12 @@ export class SessionStorage {
   private getFileName(filePath: string): string {
     const parts = filePath.split('/');
     return parts[parts.length - 1] ?? filePath;
+  }
+
+  private recordRecoveryWarning(filePath: string, error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    this.recoveryWarnings.push(
+      `Reasonian skipped a corrupted session metadata file at ${filePath} and recovered the rest of your session list (${message}).`
+    );
   }
 }

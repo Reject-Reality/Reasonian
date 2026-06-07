@@ -281,6 +281,11 @@ export default class ClaudianPlugin extends Plugin {
     }
 
     const allMetadata = await this.storage.sessions.listMetadata();
+    for (const warning of this.storage.sessions.consumeRecoveryWarnings?.() ?? []) {
+      if (warning.trim()) {
+        new Notice(warning, 9000);
+      }
+    }
     this.conversations = allMetadata.map(meta => {
       const resumeSessionId = meta.sessionId !== undefined ? meta.sessionId : meta.id;
 
