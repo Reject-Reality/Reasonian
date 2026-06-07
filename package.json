@@ -8,6 +8,7 @@
     "dev": "npm run build:css && node esbuild.config.mjs",
     "build": "node scripts/build.mjs production",
     "verify:release": "node scripts/verify-release-assets.mjs",
+    "verify:install": "node scripts/verify-obsidian-install.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand"
   },
