@@ -1,6 +1,6 @@
 {
   "name": "reasonian",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reasonian — Reasonix (DeepSeek) embedded in Obsidian sidebar",
   "main": "main.js",
   "scripts": {
