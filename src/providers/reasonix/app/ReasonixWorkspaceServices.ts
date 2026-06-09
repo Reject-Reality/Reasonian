@@ -12,6 +12,8 @@ import { ReasonixMcpStorage } from './ReasonixMcpStorage';
 import { ReasonixSettingsTabRenderer } from '../ui/ReasonixSettingsTabRenderer';
 
 class ReasonixWorkspaceServices implements ProviderWorkspaceServices {
+  // Reserved for future native Reasonix agent/subagent integration.
+  // Reasonian MVP intentionally ships without a user-facing agent mention flow.
   agentMentionProvider = null;
   cliResolver = null;
 

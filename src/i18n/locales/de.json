@@ -65,11 +65,11 @@
     }
   },
   "settings": {
-    "title": "Claudian Einstellungen",
+    "title": "Reasonian Einstellungen",
     "tabs": {
       "general": "Allgemein",
       "claude": "Claude",
-      "codex": "Codex"
+      "codex": "Reasonix"
     },
     "display": "Anzeige",
     "conversations": "Unterhaltungen",
@@ -79,7 +79,7 @@
     "models": "Modelle",
     "experimental": "Experimentell",
     "userName": {
-      "name": "Wie soll Claudian dich nennen?",
+      "name": "Wie soll Reasonian dich nennen?",
       "desc": "Dein Name für personalisierte Begrüßungen (leer lassen für allgemeine Begrüßungen)"
     },
     "excludedTags": {
@@ -145,24 +145,24 @@
     },
     "slashCommands": {
       "name": "Befehle und Fähigkeiten",
-      "desc": "Verwalte Vault-Befehle und -Fähigkeiten in .claude/commands/ und .claude/skills/. Ausgelöst durch /Name."
+      "desc": "Verwalte Vault-weite Prompt-Vorlagen in .reasonix/commands/ und .reasonix/skills/. Sie erscheinen im Slash-Command-Menü als leichte Reasonix-Helfer."
     },
     "hiddenSlashCommands": {
       "name": "Ausgeblendete Befehle",
-      "desc": "Bestimmte Schrägstrich-Befehle aus dem Dropdown ausblenden. Nützlich, um Claude Code-Befehle auszublenden, die für Claudian nicht relevant sind. Gib Befehlsnamen ohne führenden Schrägstrich ein, einen pro Zeile.",
+      "desc": "Bestimmte Slash-Befehle aus dem Dropdown ausblenden. Nützlich, um Befehle zu entfernen, die für deinen aktuellen Reasonian-Workflow nicht relevant sind. Gib pro Zeile einen Namen ohne führenden Schrägstrich ein.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
       "name": "MCP-Server",
-      "desc": "Verwalte Vault-MCP-Serverkonfigurationen in .claude/mcp.json. Server mit Kontext-Speichermodus benötigen @mention zur Aktivierung."
+      "desc": "Verwalte Vault-weite MCP-Integrationskonfigurationen in .reasonix/mcp.json. Einige Server benötigen @mention, bevor ihre Tools im aktuellen Gespräch aktiviert werden."
     },
     "plugins": {
-      "name": "Claude Code-Plugins",
-      "desc": "Verwalte Claude Code Plugins aus ~/.claude/plugins. Aktivierte Plugins werden pro Vault in .claude/settings.json gespeichert."
+      "name": "Legacy-Plugins",
+      "desc": "Die Erkennung von Legacy-Plugins wird im aktuellen Reasonian-MVP nicht verwendet."
     },
     "subagents": {
       "name": "Sub-Agenten",
-      "desc": "Verwalte Vault-Sub-Agenten in .claude/agents/. Jede Markdown-Datei definiert einen benutzerdefinierten Agenten.",
+      "desc": "Für zukünftige erweiterte Aufgabenintegration auf Reasonix-Seite reserviert und nicht Teil des aktuellen Reasonian-MVP.",
       "noAgents": "Keine Sub-Agenten konfiguriert. Klicke auf +, um einen zu erstellen.",
       "deleteConfirm": "Sub-Agent \"{name}\" löschen?",
       "saveFailed": "Sub-Agent konnte nicht gespeichert werden: {message}",
@@ -201,7 +201,7 @@
     "safety": "Sicherheit",
     "loadUserSettings": {
       "name": "Benutzer-Claude-Einstellungen laden",
-      "desc": "Lädt ~/.claude/settings.json. Wenn aktiviert, können Benutzer-Claude-Code-Berechtigungsregeln den Sicherheitsmodus umgehen."
+      "desc": "Legacy-Benutzereinstellungen werden im aktuellen Reasonian-MVP nicht verwendet."
     },
     "claudeSafeMode": {
       "name": "Safe mode",
@@ -214,7 +214,7 @@
     "environment": "Umgebung",
     "customVariables": {
       "name": "Benutzerdefinierte Variablen",
-      "desc": "Umgebungsvariablen für Claude SDK (KEY=VALUE-Format, eine pro Zeile). Export-Präfix unterstützt."
+      "desc": "Umgebungsvariablen für die Integration von Reasonian und der Reasonix-Laufzeit (KEY=VALUE-Format, eine pro Zeile). Export-Präfix wird unterstützt."
     },
     "envSnippets": {
       "name": "Snippets",
@@ -255,7 +255,7 @@
     },
     "enableChrome": {
       "name": "Chrome-Erweiterung aktivieren",
-      "desc": "Erlaubt Claude die Interaktion mit Chrome über die claude-in-chrome-Erweiterung. Die Erweiterung muss installiert sein. Erfordert Neustart der Sitzung."
+      "desc": "Reservierter Kompatibilitätsschalter für browsergestützte Abläufe. Gehört nicht zum Standardpfad des Reasonian-MVP."
     },
     "enableBangBash": {
       "name": "Bash-Modus (!) aktivieren",
@@ -266,7 +266,7 @@
     },
     "maxTabs": {
       "name": "Maximale Chat-Tabs",
-      "desc": "Maximale Anzahl gleichzeitiger Chat-Tabs (3-10). Jeder Tab verwendet eine separate Claude-Sitzung.",
+      "desc": "Maximale Anzahl gleichzeitiger Chat-Tabs (3-10). Jeder Tab verwendet eine separate Reasonix-Sitzung.",
       "warning": "Mehr als 5 Tabs können Leistung und Speichernutzung beeinträchtigen."
     },
     "tabBarPosition": {
@@ -284,8 +284,8 @@
       "desc": "Chat-Panel als Haupttab im zentralen Editorbereich statt in der rechten Seitenleiste öffnen"
     },
     "cliPath": {
-      "name": "Claude CLI-Pfad",
-      "desc": "Benutzerdefinierter Pfad zum Claude Code CLI. Leer lassen für automatische Erkennung.",
+      "name": "Legacy-CLI-Pfad",
+      "desc": "Die Legacy-CLI-Integration wird im aktuellen Reasonian-MVP nicht verwendet.",
       "descWindows": "Für den nativen Installer verwenden Sie claude.exe. Für npm/pnpm/yarn oder andere Paketmanager-Installationen verwenden Sie den cli.js-Pfad (nicht claude.cmd).",
       "descUnix": "Fügen Sie die Ausgabe von \"which claude\" ein — funktioniert sowohl für native als auch npm/pnpm/yarn-Installationen.",
       "validation": {

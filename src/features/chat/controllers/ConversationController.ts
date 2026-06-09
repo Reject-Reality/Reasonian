@@ -311,7 +311,7 @@ export class ConversationController {
 
     const agentService = this.getAgentService();
     if (!agentService) {
-      new Notice(t('chat.rewind.failed', { error: 'Agent service not available' }));
+      new Notice(t('chat.rewind.failed', { error: 'Reasonix runtime is not available' }));
       return;
     }
 

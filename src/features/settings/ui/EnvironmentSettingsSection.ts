@@ -36,11 +36,6 @@ export function renderEnvironmentSettingsSection(
 
   let envTextarea: HTMLTextAreaElement | null = null;
   const reviewEl = container.createDiv({ cls: 'claudian-env-review-warning' });
-  reviewEl.style.color = 'var(--text-warning)';
-  reviewEl.style.fontSize = '0.85em';
-  reviewEl.style.marginTop = '-0.5em';
-  reviewEl.style.marginBottom = '0.5em';
-  reviewEl.style.display = 'none';
 
   const updateReviewWarning = () => {
     const reviewKeys = getEnvironmentReviewKeysForScope(envTextarea?.value ?? '', scope);

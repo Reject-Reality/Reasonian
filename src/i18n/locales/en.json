@@ -88,7 +88,7 @@
     },
     "mediaFolder": {
       "name": "Media folder",
-      "desc": "Folder containing attachments/images. When notes use ![[image.jpg]], Reasonian will look here. Leave empty for vault root."
+      "desc": "Legacy attachment lookup path. Image workflows are outside the current Reasonian MVP; leave empty unless you need compatibility with existing vault links."
     },
     "systemPrompt": {
       "name": "Custom system prompt",
@@ -145,7 +145,7 @@
     },
     "slashCommands": {
       "name": "Commands and Skills",
-      "desc": "Manage vault-level commands and skills stored in .reasonix/commands/ and .reasonix/skills/. Triggered by /name."
+      "desc": "Manage vault-level prompt templates stored in .reasonix/commands/ and .reasonix/skills/. These appear in the slash command menu as lightweight Reasonix helpers."
     },
     "hiddenSlashCommands": {
       "name": "Hidden Commands",
@@ -154,48 +154,48 @@
     },
     "mcpServers": {
       "name": "MCP Servers",
-      "desc": "Manage vault-level MCP server configurations stored in .reasonix/mcp.json. Servers with context-saving mode require @mention to activate."
+      "desc": "Manage vault-level MCP integration stored in .reasonix/mcp.json. Some servers require @mention before their tools are activated in a conversation."
     },
     "plugins": {
       "name": "Legacy Plugins",
       "desc": "Legacy plugin discovery is not used by the Reasonian MVP runtime."
     },
     "subagents": {
-      "name": "Subagents",
-      "desc": "Reserved for future native Reasonix subagent integration.",
-      "noAgents": "No subagents configured yet.",
-      "deleteConfirm": "Delete subagent \"{name}\"?",
-      "saveFailed": "Failed to save subagent: {message}",
-      "refreshFailed": "Failed to refresh subagents: {message}",
-      "deleteFailed": "Failed to delete subagent: {message}",
+      "name": "Advanced agent slots",
+      "desc": "Reserved placeholders for future Reasonix-side advanced task integration. They are not part of the current Reasonian MVP flow.",
+      "noAgents": "No advanced task placeholders configured.",
+      "deleteConfirm": "Delete advanced task placeholder \"{name}\"?",
+      "saveFailed": "Failed to save advanced task placeholder: {message}",
+      "refreshFailed": "Failed to refresh advanced task placeholders: {message}",
+      "deleteFailed": "Failed to delete advanced task placeholder: {message}",
       "renameCleanupFailed": "Warning: could not remove old file for \"{name}\"",
-      "created": "Subagent \"{name}\" created",
-      "updated": "Subagent \"{name}\" updated",
-      "deleted": "Subagent \"{name}\" deleted",
-      "duplicateName": "An agent named \"{name}\" already exists",
+      "created": "Advanced task placeholder \"{name}\" created",
+      "updated": "Advanced task placeholder \"{name}\" updated",
+      "deleted": "Advanced task placeholder \"{name}\" deleted",
+      "duplicateName": "An advanced task placeholder named \"{name}\" already exists",
       "descriptionRequired": "Description is required",
       "promptRequired": "System prompt is required",
       "modal": {
-        "titleEdit": "Edit Subagent",
-        "titleAdd": "Add Subagent",
+        "titleAdd": "Add Advanced Task Placeholder",
+        "titleEdit": "Edit Advanced Task Placeholder",
         "name": "Name",
         "nameDesc": "Lowercase letters, numbers, and hyphens only",
         "namePlaceholder": "code-reviewer",
         "description": "Description",
-        "descriptionDesc": "Brief description of this agent",
-        "descriptionPlaceholder": "Reviews code for bugs and style",
+        "descriptionDesc": "Brief description for this reserved Reasonix-side placeholder",
+        "descriptionPlaceholder": "Reserved for future Reasonix-native workflows",
         "advancedOptions": "Advanced options",
         "model": "Model",
-        "modelDesc": "Model override for this agent",
+        "modelDesc": "Optional metadata reserved for future Reasonix-side handling",
         "tools": "Tools",
         "toolsDesc": "Comma-separated list of allowed tools (empty = all)",
         "disallowedTools": "Disallowed tools",
         "disallowedToolsDesc": "Comma-separated list of tools to disallow",
         "skills": "Skills",
-        "skillsDesc": "Comma-separated list of skills",
+        "skillsDesc": "Comma-separated list preserved as metadata only",
         "prompt": "System prompt",
-        "promptDesc": "Instructions for the agent",
-        "promptPlaceholder": "You are a code reviewer. Analyze the given code for..."
+        "promptDesc": "Reserved instructions for a future Reasonix-side role",
+        "promptPlaceholder": "Reserved for future Reasonix-native workflows"
       }
     },
     "safety": "Safety",
@@ -255,7 +255,7 @@
     },
     "enableChrome": {
       "name": "Enable Chrome extension",
-      "desc": "Reserved for browser-assisted workflows. Requires a compatible browser bridge and session restart."
+      "desc": "Reserved compatibility toggle for browser-assisted workflows. Not part of the default Reasonian MVP path."
     },
     "enableBangBash": {
       "name": "Enable bash mode (!)",

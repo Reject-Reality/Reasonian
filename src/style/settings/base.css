@@ -1,4 +1,25 @@
-/* ── Settings tab navigation ── */
+/* Settings tab navigation */
+
+.claudian-settings {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-bottom: 24px;
+}
+
+.claudian-settings-provider-single {
+  margin-top: 22px;
+}
+
+.claudian-settings-note {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+  background: var(--background-secondary);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 4px;
+}
 
 .claudian-settings-tabs {
   display: flex;
@@ -45,15 +66,19 @@
   font-size: var(--font-ui-small);
 }
 
-/* Settings page - remove separator lines from setting items */
+/* Settings page - keep native Obsidian rows, with cleaner section spacing */
 .claudian-settings .setting-item {
   border-top: none;
 }
 
-/* Settings section headings (via setHeading()) */
+.claudian-settings .setting-item-description {
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 .claudian-settings .setting-item-heading {
-  padding-top: 18px;
-  margin-top: 12px;
+  padding-top: 20px;
+  margin-top: 14px;
   border-top: 1px solid var(--background-modifier-border);
 }
 
@@ -67,6 +92,38 @@
   font-size: var(--font-ui-medium);
   font-weight: var(--font-semibold);
   color: var(--text-normal);
+}
+
+.claudian-provider-settings-section {
+  margin-top: 18px;
+}
+
+.claudian-provider-settings-section:first-of-type {
+  margin-top: 10px;
+}
+
+.claudian-provider-settings-section > .setting-item:first-child {
+  padding-top: 18px;
+  margin-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.claudian-provider-settings-section > .setting-item:first-child .setting-item-name {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+}
+
+.claudian-provider-settings-section > .setting-item:first-child .setting-item-description {
+  max-width: 680px;
+}
+
+.claudian-provider-settings-section > .setting-item:first-child .setting-item-control {
+  display: none;
+}
+
+.claudian-provider-mcp-settings,
+.claudian-mcp-container {
+  margin-top: 8px;
 }
 
 /* Custom section descriptions - align with items */
@@ -107,11 +164,11 @@
   color: var(--text-error);
 }
 
-/* Hotkey grid - 3 columns */
+/* Hotkey grid */
 .claudian-hotkey-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 12px;
   padding: 4px 0;
 }
 
@@ -130,6 +187,7 @@
 
 .claudian-hotkey-name {
   flex: 1;
+  min-width: 0;
   color: var(--text-normal);
   font-size: var(--font-ui-small);
 }
@@ -141,14 +199,19 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--font-monospace);
+  white-space: nowrap;
 }
 
-/* Media folder input width */
-.claudian-settings-media-input {
-  width: 200px;
+.claudian-max-tabs-warning,
+.claudian-env-review-warning {
+  display: none;
+  margin: -4px 0 8px;
+  color: var(--text-warning);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
 }
 
-/* ── Shared settings panel layout (used by slash-settings + agent-settings) ── */
+/* Shared settings panel layout (used by slash-settings + agent-settings) */
 
 .claudian-sp-header {
   display: flex;
@@ -275,4 +338,14 @@
   gap: 8px;
   margin-top: 16px;
   justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .claudian-settings {
+    max-width: none;
+  }
+
+  .claudian-hotkey-grid {
+    grid-template-columns: 1fr;
+  }
 }

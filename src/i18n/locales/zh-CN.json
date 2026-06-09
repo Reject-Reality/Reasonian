@@ -88,7 +88,7 @@
     },
     "mediaFolder": {
       "name": "媒体文件夹",
-      "desc": "存放附件/图片的文件夹。当笔记使用 ![[image.jpg]] 时，Reasonian 会在此查找。留空使用 Vault 根目录。"
+      "desc": "旧版附件查找路径。图片工作流不属于当前 Reasonian MVP；除非需要兼容现有 Vault 链接，否则建议留空。"
     },
     "systemPrompt": {
       "name": "自定义系统提示词",
@@ -144,8 +144,8 @@
       "btnSet": "设置快捷键"
     },
     "slashCommands": {
-      "name": "命令与技能",
-      "desc": "管理存储在 .reasonix/commands/ 和 .reasonix/skills/ 中的 Vault 级命令与技能。由 /名称 触发。"
+      "name": "命令与模板",
+      "desc": "管理存储在 .reasonix/commands/ 和 .reasonix/skills/ 中的 Vault 级提示模板。这些条目会作为轻量的 Reasonix 辅助入口出现在斜杠命令菜单中。"
     },
     "hiddenSlashCommands": {
       "name": "隐藏命令",
@@ -154,48 +154,48 @@
     },
     "mcpServers": {
       "name": "MCP 服务器",
-      "desc": "管理存储在 .reasonix/mcp.json 中的 Vault 级 MCP 服务器配置。启用上下文保存模式的服务器需要 @ 提及才能激活。"
+      "desc": "管理存储在 .reasonix/mcp.json 中的 Vault 级 MCP 集成配置。部分服务器需要先通过 @ 提及，相关工具才会在当前对话中启用。"
     },
     "plugins": {
       "name": "旧版插件",
       "desc": "Reasonian MVP 运行时不使用旧版插件发现能力。"
     },
     "subagents": {
-      "name": "子代理",
-      "desc": "为后续 Reasonix 原生子代理集成预留。",
-      "noAgents": "尚未配置子代理。",
-      "deleteConfirm": "删除子代理“{name}”？",
-      "saveFailed": "保存子代理失败：{message}",
-      "refreshFailed": "刷新子代理失败：{message}",
-      "deleteFailed": "删除子代理失败：{message}",
+      "name": "高级任务占位",
+      "desc": "为未来的 Reasonix 侧高级任务集成预留，不属于当前 Reasonian MVP 流程。",
+      "noAgents": "尚未配置高级任务占位。",
+      "deleteConfirm": "删除高级任务占位“{name}”？",
+      "saveFailed": "保存高级任务占位失败：{message}",
+      "refreshFailed": "刷新高级任务占位失败：{message}",
+      "deleteFailed": "删除高级任务占位失败：{message}",
       "renameCleanupFailed": "警告：无法删除“{name}”的旧文件",
-      "created": "已创建子代理“{name}”",
-      "updated": "已更新子代理“{name}”",
-      "deleted": "已删除子代理“{name}”",
-      "duplicateName": "名为“{name}”的代理已存在",
+      "created": "已创建高级任务占位“{name}”",
+      "updated": "已更新高级任务占位“{name}”",
+      "deleted": "已删除高级任务占位“{name}”",
+      "duplicateName": "已存在名为“{name}”的高级任务占位",
       "descriptionRequired": "描述为必填项",
       "promptRequired": "系统提示词为必填项",
       "modal": {
-        "titleEdit": "编辑子代理",
-        "titleAdd": "添加子代理",
+        "titleEdit": "编辑高级任务占位",
+        "titleAdd": "添加高级任务占位",
         "name": "名称",
         "nameDesc": "仅允许小写字母、数字和连字符",
         "namePlaceholder": "code-reviewer",
         "description": "描述",
-        "descriptionDesc": "该代理的简要描述",
-        "descriptionPlaceholder": "审查代码中的错误和风格问题",
+        "descriptionDesc": "该预留占位的简要说明",
+        "descriptionPlaceholder": "预留给未来的 Reasonix 原生工作流",
         "advancedOptions": "高级选项",
         "model": "模型",
-        "modelDesc": "该代理的模型覆盖",
+        "modelDesc": "预留给未来 Reasonix 侧处理的元数据",
         "tools": "工具",
         "toolsDesc": "允许使用的工具列表，用逗号分隔（留空 = 全部）",
         "disallowedTools": "禁用工具",
         "disallowedToolsDesc": "要禁用的工具列表，用逗号分隔",
         "skills": "技能",
-        "skillsDesc": "技能列表，用逗号分隔",
+        "skillsDesc": "仅作为元数据保留的技能列表，用逗号分隔",
         "prompt": "系统提示词",
-        "promptDesc": "给代理的指令",
-        "promptPlaceholder": "你是一名代码审查员。请分析给定代码中的..."
+        "promptDesc": "预留给未来 Reasonix 侧角色的指令",
+        "promptPlaceholder": "预留给未来的 Reasonix 原生工作流"
       }
     },
     "safety": "安全",
@@ -255,7 +255,7 @@
     },
     "enableChrome": {
       "name": "启用 Chrome 扩展",
-      "desc": "为浏览器辅助工作流预留。需要兼容的浏览器桥接能力并重启会话。"
+      "desc": "为浏览器辅助工作流保留的兼容开关，不属于默认的 Reasonian MVP 使用路径。"
     },
     "enableBangBash": {
       "name": "启用命令模式 (!)",

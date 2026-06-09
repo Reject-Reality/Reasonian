@@ -72,7 +72,9 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
       await context.plugin.saveSettings();
     };
 
-    const runtimeSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    const runtimeSection = container.createDiv({
+      cls: 'claudian-provider-settings-section claudian-provider-settings-section--runtime',
+    });
     new Setting(runtimeSection)
       .setName('Reasonix Runtime')
       .setDesc(
@@ -269,7 +271,9 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
           });
       });
 
-    const memorySection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    const memorySection = container.createDiv({
+      cls: 'claudian-provider-settings-section claudian-provider-settings-section--memory',
+    });
     new Setting(memorySection)
       .setName(trReasonix('memorySectionName'))
       .setDesc(trReasonix('memorySectionDesc'));
@@ -306,7 +310,9 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
           await reloadReasonixSettings();
         }));
 
-    const webSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    const webSection = container.createDiv({
+      cls: 'claudian-provider-settings-section claudian-provider-settings-section--web',
+    });
     new Setting(webSection)
       .setName(trReasonix('webSectionName'))
       .setDesc(trReasonix('webSectionDesc'));
@@ -321,10 +327,14 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
           await reloadReasonixSettings();
         }));
 
-    const commandSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    const commandSection = container.createDiv({
+      cls: 'claudian-provider-settings-section claudian-provider-settings-section--commands',
+    });
     new Setting(commandSection)
-      .setName(trReasonix('commandsSectionName'))
-      .setDesc(trReasonix('commandsSectionDesc'));
+      .setName('Vault prompt templates')
+      .setDesc(
+        'Manage lightweight vault-local prompt templates that help launch Reasonix with Obsidian context. This is intentionally simpler than a native Reasonix skill runtime.',
+      );
 
     const commandManagerContainer = commandSection.createDiv({ cls: 'claudian-mcp-container' });
     new ReasonixCommandSettingsManager(
@@ -333,10 +343,14 @@ export class ReasonixSettingsTabRenderer implements ProviderSettingsTabRenderer 
       this.commandCatalog,
     );
 
-    const mcpSection = container.createDiv({ cls: 'claudian-provider-settings-section' });
+    const mcpSection = container.createDiv({
+      cls: 'claudian-provider-settings-section claudian-provider-settings-section--mcp',
+    });
     new Setting(mcpSection)
-      .setName(trReasonix('mcpSectionName'))
-      .setDesc(trReasonix('mcpSectionDesc'));
+      .setName('MCP integration')
+      .setDesc(
+        'Configure MCP servers that Reasonix can access through the Obsidian host. Reasonian provides the host-side wiring and status surface; server behavior remains owned by Reasonix and the MCP servers themselves.',
+      );
 
     const mcpManagerContainer = mcpSection.createDiv({ cls: 'claudian-provider-mcp-settings' });
     new McpSettingsManager(mcpManagerContainer, {

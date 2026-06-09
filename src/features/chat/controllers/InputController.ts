@@ -327,7 +327,7 @@ export class InputController {
 
     const agentService = this.getAgentService();
     if (!agentService) {
-      new Notice('Agent service not available. Please reload the plugin.');
+      new Notice('Reasonix runtime is not available. Please reload the plugin.');
       this.activeStreamingAssistantMessage = null;
       this.resetProviderMessageBoundaryState();
       return;
@@ -1224,7 +1224,7 @@ export class InputController {
       headerEl.createDiv({ text: approvalOptions.blockedPath, cls: 'claudian-ask-approval-blocked-path' });
     }
     if (approvalOptions?.agentID) {
-      headerEl.createDiv({ text: `Agent: ${approvalOptions.agentID}`, cls: 'claudian-ask-approval-agent' });
+      headerEl.createDiv({ text: `Reasonix task: ${approvalOptions.agentID}`, cls: 'claudian-ask-approval-agent' });
     }
 
     headerEl.createDiv({ text: description, cls: 'claudian-ask-approval-desc' });

@@ -1,129 +1,264 @@
-# Reasonian Obsidian Integration Roadmap
+# Reasonian Roadmap
 
-This plan is based on the current `claudian/` worktree. `DeepSeek-Reasonix/` is treated as the upstream/reference library, not project code.
+## 1. Product Positioning
 
-## Current State
+Reasonian is an Obsidian desktop plugin that hosts Reasonix inside the vault workflow.
 
-Implemented or now wired:
+It should follow the practical spirit of [Claudian](https://github.com/YishenTu/claudian):
 
-- Single built-in provider: `reasonix`.
-- Obsidian plugin shell, sidebar view, tabs, history dropdown, settings tab, hotkeys, and inline edit command.
-- Reasonix main chat runtime using `DeepSeekClient` + `CacheFirstLoop`.
-- Vault file tools, shell tools, code query tools, todo/plan/choice tools, optional web tools, memory tools, and MCP bridge.
-- Message persistence in `.reasonix/sessions/*.messages.json`.
-- MCP configuration in `.reasonix/mcp.json`, with legacy `.claude/mcp.json` migration fallback.
-- Main chat context injection for current note, editor selection/cursor, browser selection, canvas selection, and external context paths.
-- Selected external context roots are refreshed per turn and pre-authorized for Reasonix read access without persisting an "always allow" decision.
-- Lightweight Reasonix-backed auxiliary services for title generation, instruction refinement, and inline edit.
-- Reasonix-specific vault slash commands and skills are discovered from `.reasonix/commands/**/*.md`, `.reasonix/skills/*.md`, and `.reasonix/skills/*/SKILL.md`.
-- Static Reasonix runtime commands stay read-only and take priority over vault commands with the same name.
-- Vault commands and skills are prompt-template expansions into the Reasonix main loop, including `$ARGUMENTS` support.
-- Obsidian vault events refresh the Reasonix command/skill catalog when `.reasonix/commands` or `.reasonix/skills` files are created, modified, renamed, or deleted.
-- Reasonix settings include vault command/skill management for creating, editing, deleting, and refreshing `.reasonix` prompt templates.
-- Rewind and fork are enabled for Reasonix conversations using stable local turn IDs and persisted Obsidian message history to rebuild the `CacheFirstLoop`.
-- Production builds copy Reasonix grammar WASM assets into `grammars/` and run a release asset verification gate.
+- provide a stable AI workspace inside Obsidian
+- make configuration simple
+- use Obsidian-native context well
+- avoid rebuilding capabilities that already belong to the upstream agent runtime
 
-Still incomplete:
+Reasonian is not a second implementation of Reasonix.
 
-- Reasonix command/skill settings UI is intentionally lightweight; it still needs in-Obsidian UX QA and polish.
-- Vault skills currently run as prompt templates in the main loop; native Reasonix skill/subagent execution is not integrated yet.
-- Agent/subagent mention provider is disabled; Reasonix subagent lifecycle is not integrated with the Obsidian UI.
-- Rewind and fork still need clean-vault Obsidian round-trip QA across reloads, local slash commands, and tool-heavy turns.
-- Image attachments are intentionally disabled; Reasonix is text-only for now, and the system prompt now tells the model not to claim visual analysis.
-- The settings/i18n layer still contains legacy Claudian/Claude/Codex labels in non-English locales and dead settings groups.
+## 2. Core Boundary
 
-## P0: Make Core Obsidian Use Fully Reliable
+Reasonian owns:
 
-1. Verify runtime readiness inside Obsidian.
-   - Show a clear setup state when the Reasonix API key is missing.
-   - Surface base URL/model/reasoning effort in `/status`.
-   - Add a first-run smoke path: open view, send "hello", cancel stream, resume history.
+- plugin lifecycle
+- view registration and commands
+- settings UI
+- vault and editor context collection
+- local persistence needed for Obsidian UX
+- rendering and capability gating
+- installation and release packaging
 
-2. Complete context delivery.
-   - Keep current note, editor selection, browser selection, canvas selection, and external context tags in `prepareTurn`.
-   - Selected external context directories are pre-authorized for read access during the active turn.
-   - Ensure `@file` mention resolution works for both vault files and selected external directories.
-   - Add tests for compact commands not receiving stale context tags.
+Reasonix owns:
 
-3. Harden persistence and restore.
-   - Persist message content, tool calls, content blocks, usage, MCP enabled servers, current note, and external contexts.
-   - Verify reload into an existing session restores enough Reasonix loop history to continue without duplicate messages.
-   - Add corrupted `.reasonix/sessions/*.messages.json` recovery UX.
+- runtime semantics
+- tool orchestration
+- memory behavior
+- deeper skill and subagent execution logic
+- advanced agent-side capability expansion
 
-4. Finish permissions.
-   - Map Reasonian permission modes to Reasonix gate decisions consistently: review, yolo, plan.
-   - Make shell/path approvals show accurate file paths and allow-once/always semantics.
-   - Persist "always allow external context root" decisions only when the user explicitly chooses that.
+Rule of thumb:
 
-5. Verify release packaging.
-   - Production build includes `main.js`, `styles.css`, `manifest.json`, and `grammars/*.wasm`.
-   - `npm run build` runs `scripts/verify-release-assets.mjs` and fails if grammar assets are missing.
-   - Test install into a clean Obsidian vault from copied release files.
+If a feature is fundamentally "how Reasonix thinks or runs", the plugin should integrate it rather than reimplement it.
 
-## P1: Restore Claudian-Level Features on Reasonix
+## 3. MVP Goal
 
-1. User commands and skills.
-   - Implemented discovery/storage for `.reasonix/commands/**/*.md`, `.reasonix/skills/*.md`, and `.reasonix/skills/*/SKILL.md`.
-   - Implemented dropdown entries, frontmatter metadata, static-command collision handling, and `$ARGUMENTS` template expansion.
-   - Implemented vault file-change listeners so externally edited commands and skills refresh automatically.
-   - Implemented a lightweight Reasonix settings UI for save/delete/edit management.
-   - Polish the settings UI after Obsidian visual QA.
-   - Keep static runtime commands (`/compact`, `/status`, `/memory`, etc.) read-only.
-   - Decide whether vault skills should remain main-loop prompt templates or be upgraded to native Reasonix skill execution.
+The MVP is complete when a user can:
 
-2. Reasonix agents/subagents.
-   - Decide whether to use Reasonix `registerSubagentTool` or a project-local agent abstraction.
-   - Implement `agentMentionProvider`, agent storage, and mention dropdown entries.
-   - Add `ProviderSubagentLifecycleAdapter` if Reasonix emits spawn/wait/close tool events that should render as subagent cards.
-   - Implement `loadSubagentToolCalls` and `loadSubagentFinalResult` if async subagent records are persisted by Reasonix.
+1. install Reasonian into a clean Obsidian vault
+2. open the Reasonian view
+3. configure Reasonix with the required settings
+4. send a normal chat request
+5. use Obsidian context such as current note, selection, and `@file`
+6. restart Obsidian and continue using recent sessions
 
-3. Rewind and fork.
-   - Implemented local Reasonix turn IDs for model-backed user/assistant turns.
-   - Implemented rewind through `CacheFirstLoop.rewindToUserTurn()` when the loop is hot, and persisted-message truncation/rebuild when the loop is cold.
-   - Implemented fork source resolution so forked conversations cold-start from duplicated messages instead of inheriting the source runtime window.
-   - Add clean-vault Obsidian QA for rewind/fork after plugin reload and for tool-heavy turns.
+This is an integration milestone, not a Claudian feature-parity milestone.
 
-4. Image support.
-   - Deferred intentionally: current Reasonix chat messages are text-only.
-   - Keep `supportsImageAttachments` disabled so the Obsidian image attachment UI stays hidden.
-   - Preserve image embeds as vault references only; do not inject image metadata or claim visual analysis until Reasonix exposes a real image-capable API.
+## 4. MVP Scope
 
-5. Auxiliary services with tools.
-   - Current title generation, instruction refinement, and inline edit use direct `DeepSeekClient.chat`.
-   - Upgrade inline edit to optionally read referenced files through safe read-only tools.
-   - Add small fixtures for parsing `<instruction>`, `<replacement>`, and `<insertion>` responses.
+### 4.1 Must Have
 
-## P2: Polish and Simplify the Product
+1. Plugin shell
+   - register `reasonian-view`
+   - provide ribbon and command entry
+   - load and unload reliably
 
-1. Remove stale multi-provider UI.
-   - Hide or delete settings groups that only apply to Claude/Codex, such as CLI path, Claude plugins, and Codex safe mode.
-   - Keep provider registry abstraction only where it still reduces risk.
+2. Single-provider model
+   - Reasonix is the only supported provider
+   - user-facing multi-provider complexity should be removed or hidden
 
-2. Finish branding cleanup.
-   - Update visible strings in all locale files to Reasonian/Reasonix and `.reasonix`.
-   - Keep `claudian-` CSS classes until a dedicated visual regression pass, then optionally rename with compatibility aliases.
-   - Rename internal TypeScript symbols only if it improves maintainability and does not churn unrelated files.
+3. Reasonix settings
+   - API key
+   - base URL
+   - model
+   - reasoning effort
+   - minimal environment configuration where still needed
 
-3. Improve settings UX.
-   - Move API key/base URL/model/reasoning/memory/web/MCP into one coherent Reasonix settings page.
-   - Add "Test API key" and "Test model" buttons.
-   - Show memory root and MCP config paths explicitly.
+4. Basic chat flow
+   - open sidebar chat
+   - send message
+   - render streaming output
+   - cancel safely
 
-4. Add automated checks.
-   - Unit tests for `prepareTurn` context injection.
-   - Unit tests for auxiliary response parsing and cancellation.
-   - Integration-style test for message save/hydrate using a fake vault adapter.
-   - Build test that verifies grammar assets are copied.
+5. Obsidian context integration
+   - current note
+   - editor selection or cursor context
+   - vault `@file` mentions
+   - external context directories where already supported
 
-## Acceptance Checklist
+6. Persistence and recovery
+   - save session metadata
+   - save message history
+   - restore recent sessions after restart
+   - show recovery notice for corrupted data
 
-Reasonian should be considered complete for Obsidian integration only when:
+7. Lightweight Obsidian-side helpers
+   - inline edit
+   - instruction refinement
+   - title generation
 
-- A clean Obsidian vault can install the built plugin and open the Reasonian view.
-- A user can configure API key/base URL/model and send a normal chat.
-- Current note, editor selection, browser selection, canvas selection, file mentions, and external context directories are visible to Reasonix in a predictable format.
-- Reasonix can read/write/search vault files, run approved shell commands, use MCP tools, and show tool results in the chat UI.
-- Conversations survive Obsidian restart and can continue without duplicated context.
-- Inline edit, instruction refinement, and auto-title generation work without stub responses.
-- Unsupported capabilities are either implemented or hidden with accurate UX.
-- `npm run typecheck` and `npm run build` pass, and release artifacts include grammar WASM assets.
+8. Release readiness
+   - `npm run typecheck` passes
+   - `npm run build` passes
+   - release assets include `main.js`, `styles.css`, `manifest.json`, and `grammars/`
+   - clean-vault install works
+
+### 4.2 Should Have
+
+1. Minimal `/status`
+   - active model
+   - base URL summary
+   - reasoning setting
+
+2. Basic MCP visibility
+   - settings entry remains usable
+   - tool results render in a readable way
+
+3. Clear capability gating
+   - unsupported image entry points stay hidden
+   - advanced agent affordances do not mislead users
+
+### 4.3 Not in MVP
+
+1. Plugin-managed native skill execution
+2. Full subagent lifecycle UI parity
+3. Image attachment and image understanding workflows
+4. Deep local runtime mirroring Reasonix internals
+5. Full Claudian parity before first release
+
+## 5. Module Disposition
+
+### 5.1 Keep and Continue
+
+- plugin lifecycle and workspace view
+- Reasonix provider wiring
+- settings required for normal usage
+- note and editor context collection
+- `@file` resolution
+- session persistence and recovery
+- inline edit, title generation, instruction refinement
+- build and install packaging
+
+### 5.2 Keep but Simplify
+
+- vault prompt templates
+- MCP settings and status exposure
+- `/status`
+- rewind and fork UX
+- tool cards and execution summaries
+- background task rendering
+
+These should remain useful, but lightweight. We do not need to turn the plugin into a full agent operations console.
+
+### 5.3 Freeze or Deprioritize
+
+- native subagent mention provider work
+- plugin-owned skill runtime semantics
+- broad architecture work done only to preserve legacy multi-provider patterns
+- image pipeline work before real upstream support exists
+- deeper agent lifecycle UI that does not improve the Obsidian host experience
+
+## 6. Execution Priorities
+
+### P0. Integration Reliability
+
+Reasonian is usable as an Obsidian host for Reasonix.
+
+Includes:
+
+- clean-vault install succeeds
+- view opens without crash
+- missing config produces clear guidance
+- normal chat path works
+- context injection is predictable
+- session persistence and recovery are reliable
+- unsupported capabilities are hidden or clearly labeled
+
+### P1. UX Simplification
+
+Reasonian feels focused and does not pretend to own more runtime behavior than it actually does.
+
+Includes:
+
+- Reasonix-first wording in settings and UI
+- reduction of misleading subagent and skill terminology
+- simpler command template UX
+- readable tool and status presentation
+
+### P2. Post-MVP Enhancements
+
+Only after P0 and P1 are stable:
+
+- improved MCP transparency
+- stronger rewind and fork reload handling
+- richer diagnostics
+- selective advanced task visualization if it improves real usage
+
+## 7. Milestones
+
+### Milestone A: Product Boundary Reset
+
+Goal:
+
+- align roadmap, module disposition, and user-visible wording with the integration-first strategy
+
+Exit criteria:
+
+- roadmap rewritten
+- module disposition documented
+- major misleading settings text reduced
+
+### Milestone B: MVP Reliability
+
+Goal:
+
+- ensure install, configure, open, chat, persist, and restore all work reliably
+
+Exit criteria:
+
+- typecheck and build pass
+- clean-vault install verified
+- normal chat and restart recovery verified
+
+### Milestone C: UX Simplification Pass
+
+Goal:
+
+- reduce user confusion from legacy multi-provider, skill, and subagent language
+
+Exit criteria:
+
+- unsupported features hidden or relabeled
+- advanced placeholders clearly marked as non-MVP
+- common settings and chat flows read as Reasonix integration, not local runtime ownership
+
+### Milestone D: Release Preparation
+
+Goal:
+
+- produce a shippable internal or public build
+
+Exit criteria:
+
+- release package complete
+- README and known limitations updated
+- install steps reproducible
+
+## 8. Acceptance Checklist
+
+Reasonian should only be considered MVP-ready when all of the following are true:
+
+- it installs into a clean Obsidian vault
+- the Reasonian view opens successfully
+- the user can configure Reasonix from settings
+- the user can send and cancel a normal chat request
+- current note and `@file` context work in a predictable format
+- recent sessions survive restart without obvious duplication or corruption
+- inline edit, title generation, and instruction refinement work as real features
+- unsupported capabilities are hidden or clearly marked
+- `npm run typecheck` and `npm run build` both pass
+
+## 9. Development Rule
+
+Before adding or expanding a feature, ask:
+
+1. Is this improving the Obsidian host experience?
+2. Or are we rebuilding Reasonix inside the plugin?
+
+If it is the second one, default to not building it.

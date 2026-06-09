@@ -39,8 +39,6 @@ class ReasonixCommandEntryModal extends Modal {
   private model = '';
   private disableModelInvocation = false;
   private userInvocable = true;
-  private contextFork = false;
-  private agent = '';
   private hooks = '';
   private nameInputEl: HTMLInputElement | null = null;
 
@@ -62,8 +60,6 @@ class ReasonixCommandEntryModal extends Modal {
       this.model = entry.model ?? '';
       this.disableModelInvocation = entry.disableModelInvocation === true;
       this.userInvocable = entry.userInvocable !== false;
-      this.contextFork = entry.context === 'fork';
-      this.agent = entry.agent ?? '';
       this.hooks = entry.hooks ? JSON.stringify(entry.hooks, null, 2) : '';
     }
   }
@@ -160,6 +156,11 @@ class ReasonixCommandEntryModal extends Modal {
   private renderAdvancedFields(contentEl: HTMLElement): void {
     const advancedEl = contentEl.createDiv({ cls: 'claudian-mcp-type-fields' });
 
+    const noteEl = advancedEl.createDiv({ cls: 'claudian-mcp-empty' });
+    noteEl.setText(
+      'Reasonian stores vault templates as lightweight Reasonix launch prompts. Advanced agent and fork fields are treated as compatibility metadata, not active MVP execution features.'
+    );
+
     new Setting(advancedEl)
       .setName(trReasonix('modalModelName'))
       .setDesc(trReasonix('modalModelDesc'))
@@ -200,25 +201,6 @@ class ReasonixCommandEntryModal extends Modal {
         .setValue(this.disableModelInvocation)
         .onChange((value) => {
           this.disableModelInvocation = value;
-        }));
-
-    new Setting(advancedEl)
-      .setName(trReasonix('modalForkContextName'))
-      .setDesc(trReasonix('modalForkContextDesc'))
-      .addToggle((toggle) => toggle
-        .setValue(this.contextFork)
-        .onChange((value) => {
-          this.contextFork = value;
-        }));
-
-    new Setting(advancedEl)
-      .setName(trReasonix('modalAgentName'))
-      .setDesc(trReasonix('modalAgentDesc'))
-      .addText((text) => text
-        .setPlaceholder(trReasonix('modalAgentPlaceholder'))
-        .setValue(this.agent)
-        .onChange((value) => {
-          this.agent = value;
         }));
 
     const hooksSetting = new Setting(advancedEl)
@@ -279,8 +261,8 @@ class ReasonixCommandEntryModal extends Modal {
       model: this.model.trim() || undefined,
       disableModelInvocation: this.disableModelInvocation ? true : undefined,
       userInvocable: this.userInvocable,
-      context: this.contextFork ? 'fork' : undefined,
-      agent: this.agent.trim() || undefined,
+      context: undefined,
+      agent: undefined,
       hooks,
       scope: 'vault',
       source: 'user',

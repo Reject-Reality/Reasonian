@@ -252,7 +252,7 @@ export class InlineEditModal {
 class InlineEditController {
   private inputEl: HTMLInputElement | null = null;
   private spinnerEl: HTMLElement | null = null;
-  private agentReplyEl: HTMLElement | null = null;
+  private reasonixReplyEl: HTMLElement | null = null;
   private containerEl: HTMLElement | null = null;
   private editedText: string | null = null;
   private insertedText: string | null = null;
@@ -405,10 +405,10 @@ class InlineEditController {
     container.className = 'claudian-inline-input-container';
     this.containerEl = container;
 
-    this.agentReplyEl = document.createElement('div');
-    this.agentReplyEl.className = 'claudian-inline-agent-reply';
-    this.agentReplyEl.style.display = 'none';
-    container.appendChild(this.agentReplyEl);
+    this.reasonixReplyEl = document.createElement('div');
+    this.reasonixReplyEl.className = 'claudian-inline-agent-reply';
+    this.reasonixReplyEl.style.display = 'none';
+    container.appendChild(this.reasonixReplyEl);
 
     const inputWrap = document.createElement('div');
     inputWrap.className = 'claudian-inline-input-wrap';
@@ -519,24 +519,24 @@ class InlineEditController {
         this.insertedText = result.insertedText;
         this.showInsertionInPlace();
       } else if (result.clarification) {
-        this.showAgentReply(result.clarification);
+        this.showReasonixReply(result.clarification);
         this.isConversing = true;
         this.inputEl.disabled = false;
         this.inputEl.value = '';
         this.inputEl.placeholder = 'Reply to continue...';
         this.inputEl.focus();
       } else {
-        this.handleError('No response from agent');
+        this.handleError('No response from Reasonix');
       }
     } else {
       this.handleError(result.error || 'Error - try again');
     }
   }
 
-  private showAgentReply(message: string) {
-    if (!this.agentReplyEl || !this.containerEl) return;
-    this.agentReplyEl.style.display = 'block';
-    this.agentReplyEl.textContent = message;
+  private showReasonixReply(message: string) {
+    if (!this.reasonixReplyEl || !this.containerEl) return;
+    this.reasonixReplyEl.style.display = 'block';
+    this.reasonixReplyEl.textContent = message;
     this.containerEl.classList.add('has-agent-reply');
   }
 

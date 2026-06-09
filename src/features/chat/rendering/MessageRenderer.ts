@@ -434,7 +434,7 @@ export class MessageRenderer {
       };
     }
 
-    const description = (toolCall.input?.description as string) || 'Subagent task';
+    const description = (toolCall.input?.description as string) || 'Reasonix task';
     const prompt = (toolCall.input?.prompt as string) || '';
     const mode = modeHint ?? (toolCall.input?.run_in_background === true ? 'async' : 'sync');
 

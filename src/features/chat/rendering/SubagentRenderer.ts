@@ -48,7 +48,7 @@ const SUBAGENT_TOOL_STATUS_ICONS: Partial<Record<ToolCallInfo['status'], string>
 };
 
 function extractTaskDescription(input: Record<string, unknown>): string {
-  return (input.description as string) || 'Subagent task';
+  return (input.description as string) || 'Reasonix task';
 }
 
 function extractTaskPrompt(input: Record<string, unknown>): string {
@@ -84,14 +84,14 @@ function createSection(parentEl: HTMLElement, title: string, bodyClass?: string)
 function setPromptText(promptBodyEl: HTMLElement, prompt: string): void {
   promptBodyEl.empty();
   const textEl = promptBodyEl.createDiv({ cls: 'claudian-subagent-prompt-text' });
-  textEl.setText(prompt || 'No prompt provided');
+  textEl.setText(prompt || 'No task context provided');
 }
 
 function updateSyncHeaderAria(state: SubagentState): void {
   const toolCount = state.info.toolCalls.length;
   state.headerEl.setAttribute(
     'aria-label',
-    `Subagent task: ${truncateDescription(state.info.description)} - ${toolCount} tool uses - Status: ${state.info.status} - click to expand`
+    `Reasonix task: ${truncateDescription(state.info.description)} - ${toolCount} tool steps - Status: ${state.info.status} - open details`
   );
   state.statusEl.setAttribute('aria-label', `Status: ${state.info.status}`);
 }
@@ -174,7 +174,7 @@ function ensureResultSection(state: SubagentState): SubagentSection {
     return { wrapperEl: state.resultSectionEl, bodyEl: state.resultBodyEl };
   }
 
-  const section = createSection(state.contentEl, 'Result', 'claudian-subagent-result-body');
+  const section = createSection(state.contentEl, 'Outcome', 'claudian-subagent-result-body');
   section.wrapperEl.addClass('claudian-subagent-section-result');
   state.resultSectionEl = section.wrapperEl;
   state.resultBodyEl = section.bodyEl;
@@ -210,7 +210,7 @@ function hydrateSyncSubagentStateFromStored(state: SubagentState, subagent: Suba
   }
 
   if (subagent.status === 'completed' || subagent.status === 'error') {
-    const fallback = subagent.status === 'error' ? 'ERROR' : 'DONE';
+    const fallback = subagent.status === 'error' ? 'Task ended with an error' : 'Completed';
     finalizeSubagentBlock(state, subagent.result || fallback, subagent.status === 'error');
   } else {
     state.statusEl.className = 'claudian-subagent-status status-running';
@@ -251,14 +251,14 @@ export function createSubagentBlock(
   labelEl.setText(truncateDescription(description));
 
   const countEl = headerEl.createDiv({ cls: 'claudian-subagent-count' });
-  countEl.setText('0 tool uses');
+  countEl.setText('0 tool steps');
 
   const statusEl = headerEl.createDiv({ cls: 'claudian-subagent-status status-running' });
   statusEl.setAttribute('aria-label', 'Status: running');
 
   const contentEl = wrapperEl.createDiv({ cls: 'claudian-subagent-content' });
 
-  const promptSection = createSection(contentEl, 'Prompt', 'claudian-subagent-prompt-body');
+  const promptSection = createSection(contentEl, 'Task context', 'claudian-subagent-prompt-body');
   promptSection.wrapperEl.addClass('claudian-subagent-section-prompt');
   setPromptText(promptSection.bodyEl, prompt);
 
@@ -318,7 +318,7 @@ export function addSubagentToolCall(
   state.info.toolCalls.push(toolCall);
 
   const toolCount = state.info.toolCalls.length;
-  state.countEl.setText(`${toolCount} tool uses`);
+  state.countEl.setText(`${toolCount} tool steps`);
 
   const toolView = createSubagentToolView(state.toolsContainerEl, toolCall);
   state.toolElements.set(toolCall.id, toolView);
@@ -353,7 +353,7 @@ export function finalizeSubagentBlock(
   state.info.result = result;
 
   state.labelEl.setText(truncateDescription(state.info.description));
-  state.countEl.setText(`${state.info.toolCalls.length} tool uses`);
+  state.countEl.setText(`${state.info.toolCalls.length} tool steps`);
 
   state.statusEl.className = 'claudian-subagent-status';
   state.statusEl.addClass(`status-${state.info.status}`);
@@ -368,7 +368,7 @@ export function finalizeSubagentBlock(
     state.wrapperEl.addClass('error');
   }
 
-  const finalText = result?.trim() ? result : (isError ? 'ERROR' : 'DONE');
+  const finalText = result?.trim() ? result : (isError ? 'Task ended with an error' : 'Completed');
   setResultText(state, finalText);
 
   updateSyncHeaderAria(state);
@@ -418,7 +418,7 @@ function getAsyncStatusText(asyncStatus: string | undefined): string {
     case 'pending': return 'Initializing';
     case 'completed': return ''; // Just show tick icon, no text
     case 'error': return 'Error';
-    case 'orphaned': return 'Orphaned';
+    case 'orphaned': return 'Interrupted';
     default: return 'Running in background';
   }
 }
@@ -428,7 +428,7 @@ function getAsyncStatusAriaLabel(asyncStatus: string | undefined): string {
     case 'pending': return 'Initializing';
     case 'completed': return 'Completed';
     case 'error': return 'Error';
-    case 'orphaned': return 'Orphaned';
+    case 'orphaned': return 'Interrupted';
     default: return 'Running in background';
   }
 }
@@ -439,7 +439,7 @@ function updateAsyncLabel(state: AsyncSubagentState): void {
   const statusLabel = getAsyncStatusAriaLabel(state.info.asyncStatus);
   state.headerEl.setAttribute(
     'aria-label',
-    `Background task: ${truncateDescription(state.info.description)} - ${statusLabel} - click to expand`
+    `Reasonix background task: ${truncateDescription(state.info.description)} - ${statusLabel} - open details`
   );
 }
 
@@ -450,7 +450,7 @@ function renderAsyncContentLikeSync(
 ): void {
   contentEl.empty();
 
-  const promptSection = createSection(contentEl, 'Prompt', 'claudian-subagent-prompt-body');
+  const promptSection = createSection(contentEl, 'Task context', 'claudian-subagent-prompt-body');
   promptSection.wrapperEl.addClass('claudian-subagent-section-prompt');
   setPromptText(promptSection.bodyEl, subagent.prompt || '');
 
@@ -467,16 +467,16 @@ function renderAsyncContentLikeSync(
     return;
   }
 
-  const resultSection = createSection(contentEl, 'Result', 'claudian-subagent-result-body');
+  const resultSection = createSection(contentEl, 'Outcome', 'claudian-subagent-result-body');
   resultSection.wrapperEl.addClass('claudian-subagent-section-result');
   const resultEl = resultSection.bodyEl.createDiv({ cls: 'claudian-subagent-result-output' });
 
   if (displayStatus === 'orphaned') {
-    resultEl.setText(subagent.result || 'Conversation ended before task completed');
+    resultEl.setText(subagent.result || 'This background task ended before completion');
     return;
   }
 
-  const fallback = displayStatus === 'error' ? 'ERROR' : 'DONE';
+  const fallback = displayStatus === 'error' ? 'Task ended with an error' : 'Completed';
   const finalText = subagent.result?.trim() ? subagent.result : fallback;
   resultEl.setText(finalText);
 }
@@ -490,7 +490,7 @@ export function createAsyncSubagentBlock(
   taskToolId: string,
   taskInput: Record<string, unknown>
 ): AsyncSubagentState {
-  const description = (taskInput.description as string) || 'Background task';
+  const description = (taskInput.description as string) || 'Reasonix background task';
   const prompt = (taskInput.prompt as string) || '';
 
   const info: SubagentInfo = {
@@ -512,7 +512,7 @@ export function createAsyncSubagentBlock(
   headerEl.setAttribute('tabindex', '0');
   headerEl.setAttribute('role', 'button');
   headerEl.setAttribute('aria-expanded', 'false');
-  headerEl.setAttribute('aria-label', `Background task: ${description} - Initializing - click to expand`);
+  headerEl.setAttribute('aria-label', `Reasonix background task: ${description} - Initializing - open details`);
 
   const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });
   iconEl.setAttribute('aria-hidden', 'true');
@@ -593,12 +593,12 @@ export function finalizeAsyncSubagent(
 export function markAsyncSubagentOrphaned(state: AsyncSubagentState): void {
   state.info.asyncStatus = 'orphaned';
   state.info.status = 'error';
-  state.info.result = 'Conversation ended before task completed';
+  state.info.result = 'This background task ended before completion';
 
   setAsyncWrapperStatus(state.wrapperEl, 'orphaned');
   updateAsyncLabel(state);
 
-  state.statusTextEl.setText('Orphaned');
+  state.statusTextEl.setText('Interrupted');
 
   state.statusEl.className = 'claudian-subagent-status status-error';
   state.statusEl.empty();
@@ -638,7 +638,7 @@ export function renderStoredAsyncSubagent(
   headerEl.setAttribute('aria-expanded', 'false');
   headerEl.setAttribute(
     'aria-label',
-    `Background task: ${subagent.description} - ${statusAriaLabel} - click to expand`
+    `Reasonix background task: ${subagent.description} - ${statusAriaLabel} - open details`
   );
 
   const iconEl = headerEl.createDiv({ cls: 'claudian-subagent-icon' });

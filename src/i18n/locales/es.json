@@ -65,11 +65,11 @@
     }
   },
   "settings": {
-    "title": "Configuración de Claudian",
+    "title": "Configuración de Reasonian",
     "tabs": {
       "general": "General",
-      "claude": "Claude",
-      "codex": "Codex"
+      "claude": "Reasonix",
+      "codex": "Reasonix"
     },
     "display": "Pantalla",
     "conversations": "Conversaciones",
@@ -79,7 +79,7 @@
     "models": "Modelos",
     "experimental": "Experimental",
     "userName": {
-      "name": "¿Cómo debería Claudian llamarte?",
+      "name": "¿Cómo debería llamarte Reasonian?",
       "desc": "Tu nombre para saludos personalizados (dejar vacío para saludos genéricos)"
     },
     "excludedTags": {
@@ -88,7 +88,7 @@
     },
     "mediaFolder": {
       "name": "Carpeta de medios",
-      "desc": "Carpeta que contiene archivos adjuntos/imagenes. Cuando las notas usan ![[image.jpg]], Claude buscará aquí. Dejar vacío para la raíz del depósito."
+      "desc": "Ruta heredada de búsqueda de adjuntos. Los flujos con imágenes no forman parte del MVP actual de Reasonian; déjalo vacío salvo que necesites compatibilidad con enlaces existentes del vault."
     },
     "systemPrompt": {
       "name": "Prompt de sistema personalizado",
@@ -145,63 +145,63 @@
     },
     "slashCommands": {
       "name": "Comandos y habilidades",
-      "desc": "Administra comandos y habilidades a nivel de vault almacenados en .claude/commands/ y .claude/skills/. Activados por /nombre."
+      "desc": "Administra plantillas de prompt a nivel de vault almacenadas en .reasonix/commands/ y .reasonix/skills/. Aparecen en el menú de comandos slash como ayudas ligeras de Reasonix."
     },
     "hiddenSlashCommands": {
       "name": "Comandos ocultos",
-      "desc": "Oculta comandos slash específicos del menú desplegable. Útil para ocultar comandos de Claude Code que no son relevantes para Claudian. Ingresa nombres de comandos sin la barra inicial, uno por línea.",
+      "desc": "Oculta comandos slash específicos del menú desplegable. Útil para quitar comandos que no son relevantes para tu flujo actual con Reasonian. Ingresa un nombre por línea sin la barra inicial.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
       "name": "Servidores MCP",
-      "desc": "Administra configuraciones de servidores MCP a nivel de vault almacenadas en .claude/mcp.json. Los servidores con modo de guardado de contexto requieren @mention para activarse."
+      "desc": "Administra la configuración de integración MCP a nivel de vault almacenada en .reasonix/mcp.json. Algunos servidores requieren @mention antes de activar sus herramientas en la conversación actual."
     },
     "plugins": {
-      "name": "Plugins de Claude Code",
-      "desc": "Administra plugins de Claude Code descubiertos desde ~/.claude/plugins. Los plugins habilitados se almacenan por vault en .claude/settings.json."
+      "name": "Plugins heredados",
+      "desc": "La detección de plugins heredados no se usa en el MVP actual de Reasonian."
     },
     "subagents": {
-      "name": "Subagentes",
-      "desc": "Administra subagentes a nivel de vault almacenados en .claude/agents/. Cada archivo Markdown define un agente personalizado.",
-      "noAgents": "No hay subagentes configurados. Haz clic en + para crear uno.",
-      "deleteConfirm": "¿Eliminar el subagente \"{name}\"?",
-      "saveFailed": "No se pudo guardar el subagente: {message}",
-      "refreshFailed": "No se pudieron actualizar los subagentes: {message}",
-      "deleteFailed": "No se pudo eliminar el subagente: {message}",
+      "name": "Marcadores de tareas avanzadas",
+      "desc": "Reservado para una futura integración de tareas avanzadas del lado de Reasonix y fuera del alcance del MVP actual de Reasonian.",
+      "noAgents": "No hay marcadores de tareas avanzadas configurados.",
+      "deleteConfirm": "¿Eliminar el marcador de tarea avanzada \"{name}\"?",
+      "saveFailed": "No se pudo guardar el marcador de tarea avanzada: {message}",
+      "refreshFailed": "No se pudieron actualizar los marcadores de tareas avanzadas: {message}",
+      "deleteFailed": "No se pudo eliminar el marcador de tarea avanzada: {message}",
       "renameCleanupFailed": "Advertencia: no se pudo eliminar el archivo anterior de \"{name}\"",
-      "created": "Se creó el subagente \"{name}\"",
-      "updated": "Se actualizó el subagente \"{name}\"",
-      "deleted": "Se eliminó el subagente \"{name}\"",
-      "duplicateName": "Ya existe un agente con el nombre \"{name}\"",
+      "created": "Se creó el marcador de tarea avanzada \"{name}\"",
+      "updated": "Se actualizó el marcador de tarea avanzada \"{name}\"",
+      "deleted": "Se eliminó el marcador de tarea avanzada \"{name}\"",
+      "duplicateName": "Ya existe un marcador de tarea avanzada con el nombre \"{name}\"",
       "descriptionRequired": "La descripción es obligatoria",
       "promptRequired": "El prompt del sistema es obligatorio",
       "modal": {
-        "titleEdit": "Editar subagente",
-        "titleAdd": "Agregar subagente",
+        "titleEdit": "Editar marcador de tarea avanzada",
+        "titleAdd": "Agregar marcador de tarea avanzada",
         "name": "Nombre",
         "nameDesc": "Solo letras minúsculas, números y guiones",
         "namePlaceholder": "code-reviewer",
         "description": "Descripción",
-        "descriptionDesc": "Descripción breve de este agente",
-        "descriptionPlaceholder": "Revisa código en busca de errores y estilo",
+        "descriptionDesc": "Descripción breve de este marcador reservado",
+        "descriptionPlaceholder": "Reservado para futuros flujos nativos de Reasonix",
         "advancedOptions": "Opciones avanzadas",
         "model": "Modelo",
-        "modelDesc": "Modelo alternativo para este agente",
+        "modelDesc": "Metadatos opcionales reservados para un futuro tratamiento del lado de Reasonix",
         "tools": "Herramientas",
         "toolsDesc": "Lista separada por comas de las herramientas permitidas (vacío = todas)",
         "disallowedTools": "Herramientas no permitidas",
         "disallowedToolsDesc": "Lista separada por comas de herramientas no permitidas",
         "skills": "Habilidades",
-        "skillsDesc": "Lista separada por comas de habilidades",
+        "skillsDesc": "Lista de habilidades conservada solo como metadatos",
         "prompt": "Prompt del sistema",
-        "promptDesc": "Instrucciones para el agente",
-        "promptPlaceholder": "Eres un revisor de código. Analiza el código proporcionado para..."
+        "promptDesc": "Instrucciones reservadas para un futuro rol del lado de Reasonix",
+        "promptPlaceholder": "Reservado para futuros flujos nativos de Reasonix"
       }
     },
     "safety": "Seguridad",
     "loadUserSettings": {
-      "name": "Cargar configuración de usuario Claude",
-      "desc": "Carga ~/.claude/settings.json. Cuando está habilitado, las reglas de permisos del usuario pueden eludir el modo seguro."
+      "name": "Cargar configuración heredada del usuario",
+      "desc": "La configuración heredada del usuario no se usa en el MVP actual de Reasonian."
     },
     "claudeSafeMode": {
       "name": "Safe mode",
@@ -214,7 +214,7 @@
     "environment": "Entorno",
     "customVariables": {
       "name": "Variables personalizadas",
-      "desc": "Variables de entorno para Claude SDK (formato KEY=VALUE, una por línea). Prefijo export soportado."
+      "desc": "Variables de entorno para la integración entre Reasonian y el runtime de Reasonix (formato KEY=VALUE, una por línea). Se admite el prefijo export."
     },
     "envSnippets": {
       "name": "Fragmentos",
@@ -255,7 +255,7 @@
     },
     "enableChrome": {
       "name": "Habilitar extensión de Chrome",
-      "desc": "Permitir que Claude interactúe con Chrome a través de la extensión claude-in-chrome. Requiere que la extensión esté instalada. Requiere reinicio de sesión."
+      "desc": "Interruptor de compatibilidad reservado para flujos asistidos por navegador. No forma parte de la ruta de uso predeterminada del MVP de Reasonian."
     },
     "enableBangBash": {
       "name": "Habilitar modo bash (!)",
@@ -277,7 +277,7 @@
     },
     "enableAutoScroll": {
       "name": "Desplazamiento automático durante streaming",
-      "desc": "Desplazarse automáticamente hacia abajo mientras Claude transmite respuestas. Desactivar para quedarse arriba y leer desde el principio."
+      "desc": "Desplazarse automáticamente hacia abajo mientras Reasonix transmite respuestas. Desactívalo para quedarte arriba y leer desde el principio."
     },
     "openInMainTab": {
       "name": "Abrir en área de editor principal",
@@ -285,7 +285,7 @@
     },
     "cliPath": {
       "name": "Ruta CLI Claude",
-      "desc": "Ruta personalizada a Claude Code CLI. Dejar vacío para detección automática.",
+      "desc": "La integración CLI heredada no se usa en el MVP actual de Reasonian.",
       "descWindows": "Para el instalador nativo, use claude.exe. Para instalaciones con npm/pnpm/yarn u otros gestores de paquetes, use la ruta cli.js (no claude.cmd).",
       "descUnix": "Pegue la salida de \"which claude\" — funciona tanto para instalaciones nativas como npm/pnpm/yarn.",
       "validation": {

@@ -128,7 +128,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
       this.activeTab = 'general';
     }
 
-    const tabBar = containerEl.createDiv({ cls: 'claudian-settings-tabs' });
+    const tabShell = containerEl.createDiv({ cls: 'claudian-settings-tab-shell' });
+    const tabBar = tabShell.createDiv({ cls: 'claudian-settings-tabs' });
     const tabButtons = new Map<SettingsTabId, HTMLButtonElement>();
     const tabContents = new Map<SettingsTabId, HTMLDivElement>();
 
@@ -151,7 +152,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
     }
 
     for (const id of tabIds) {
-      const content = containerEl.createDiv({
+      const content = tabShell.createDiv({
         cls: `claudian-settings-tab-content${id === this.activeTab ? ' claudian-settings-tab-content--active' : ''}`,
       });
       tabContents.set(id, content);
@@ -183,6 +184,11 @@ export class ClaudianSettingTab extends PluginSettingTab {
   }
 
   private renderGeneralTab(container: HTMLElement): void {
+    const integrationNote = container.createDiv({ cls: 'claudian-settings-note' });
+    integrationNote.setText(
+      'Reasonian is an Obsidian host for Reasonix. General settings stay lightweight; model and runtime behavior live in the Reasonix settings section below.'
+    );
+
     // --- Language ---
     new Setting(container)
       .setName(t('settings.language.name'))
@@ -233,11 +239,6 @@ export class ClaudianSettingTab extends PluginSettingTab {
       .setDesc(t('settings.maxTabs.desc'));
 
     const maxTabsWarningEl = container.createDiv({ cls: 'claudian-max-tabs-warning' });
-    maxTabsWarningEl.style.color = 'var(--text-warning)';
-    maxTabsWarningEl.style.fontSize = '0.85em';
-    maxTabsWarningEl.style.marginTop = '-0.5em';
-    maxTabsWarningEl.style.marginBottom = '0.5em';
-    maxTabsWarningEl.style.display = 'none';
     maxTabsWarningEl.setText(t('settings.maxTabs.warning'));
 
     const updateMaxTabsWarning = (value: number): void => {
@@ -361,37 +362,10 @@ export class ClaudianSettingTab extends PluginSettingTab {
       });
 
     new Setting(container)
-      .setName(t('settings.excludedTags.name'))
-      .setDesc(t('settings.excludedTags.desc'))
-      .addTextArea((text) => {
-        text
-          .setPlaceholder('system\nprivate\ndraft')
-          .setValue(this.plugin.settings.excludedTags.join('\n'))
-          .onChange(async (value) => {
-            this.plugin.settings.excludedTags = value
-              .split(/\r?\n/)
-              .map((entry) => entry.trim().replace(/^#/, ''))
-              .filter((entry) => entry.length > 0);
-            await this.plugin.saveSettings();
-          });
-        text.inputEl.rows = 4;
-        text.inputEl.cols = 30;
-      });
-
-    new Setting(container)
-      .setName(t('settings.mediaFolder.name'))
-      .setDesc(t('settings.mediaFolder.desc'))
-      .addText((text) => {
-        text
-          .setPlaceholder('attachments')
-          .setValue(this.plugin.settings.mediaFolder)
-          .onChange(async (value) => {
-            this.plugin.settings.mediaFolder = value.trim();
-            await this.plugin.saveSettings();
-          });
-        text.inputEl.addClass('claudian-settings-media-input');
-        text.inputEl.addEventListener('blur', () => this.restartServiceForPromptChange());
-      });
+      .setName('Content scope')
+      .setDesc(
+        'Reasonian uses the active note, editor selection, @file mentions, and optional external context roots as its primary Obsidian context sources. Image-specific and legacy content settings are intentionally hidden in this integration-first build.'
+      );
 
     // --- Input ---
 
@@ -469,8 +443,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
       plugin: this.plugin,
       scope: 'shared',
       heading: t('settings.environment'),
-      name: 'Shared environment',
-      desc: 'Provider-neutral runtime variables shared across all providers. Use this for PATH, proxy, cert, and temp variables.',
+      name: 'Host environment',
+      desc: 'Environment variables for the Obsidian host runtime around Reasonix. Use this for PATH, proxy, cert, and temp variables needed by local tools or MCP servers.',
       placeholder: 'PATH=/opt/homebrew/bin:/usr/local/bin\nHTTPS_PROXY=http://proxy.example.com:8080\nSSL_CERT_FILE=/path/to/cert.pem',
       renderCustomContextLimits: (target) => this.renderCustomContextLimits(target),
     });
